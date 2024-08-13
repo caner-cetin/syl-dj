@@ -27,12 +27,17 @@ import java.util.Collections
 
 fun Route.trackInfoRoute(db: Database) {
     @Serializable
+    data class TrackError(
+        val filename: String,
+        val error: Pair<String, String>
+    )
+    @Serializable
     class TrackInfoUploadHighLevelResponse (
-        val errors: Map<String, ErrorResponse>
+        val errors: MutableList<TrackError>
     )
     post("/track/info/upload/highlevel") {
         val multipart = call.receiveMultipart()
-        val errorList: MutableMap<String, ErrorResponse> = Collections.synchronizedMap(mutableMapOf())
+        val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
 
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val trackDataList = Collections.synchronizedList(mutableListOf<TrackData>())
@@ -66,13 +71,13 @@ fun Route.trackInfoRoute(db: Database) {
                                         }).toList().filterIsInstance<String>()
 
                                         if (trackArtists.isEmpty()) {
-                                            errorList[entry.name] = Errors.DJ0001.response
+                                            errorList.add(TrackError(entry.name, Errors.DJ0001.codeAndMessage()))
                                             return@launch
                                         }
 
                                         val trackAlbum = tags.optJSONArray("album")?.optString(0) ?: ""
                                         if (trackAlbum.isEmpty()) {
-                                            errorList[entry.name] = Errors.DJ0002.response
+                                            errorList.add(TrackError(entry.name, Errors.DJ0002.codeAndMessage()))
                                             return@launch
                                         }
 
@@ -102,7 +107,7 @@ fun Route.trackInfoRoute(db: Database) {
                                             }
                                         }
                                     } catch (e: JSONException) {
-                                        errorList[entry.name] = Errors.DJ0006.response
+                                        errorList.add(TrackError(entry.name, Errors.DJ0006.codeAndMessage()))
                                     }
                                 }
                             }
