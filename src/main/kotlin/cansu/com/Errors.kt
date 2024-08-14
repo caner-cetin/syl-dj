@@ -4,6 +4,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
+import okio.IOException
 
 @Serializable
 class ErrorResponse (
@@ -19,6 +20,14 @@ sealed class Errors(val code: HttpStatusCode, val response: ErrorResponse) {
     object DJ0002: Errors(
         HttpStatusCode.BadRequest,
         ErrorResponse("DJ-0002", "Album name is required for submitting a track.")
+    )
+    class DJ0003(e: java.io.IOException): Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0003", "Error while requesting cover art info: ${e.localizedMessage}")
+    )
+    object DJ0004: Errors (
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0004", "Response is not successful, please check MBID.")
     )
     object DJ0006: Errors(
         HttpStatusCode.BadRequest,

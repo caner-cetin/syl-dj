@@ -62,5 +62,5 @@ dependencies {
     implementation("org.json:json:20240303")
     // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
     implementation("org.apache.commons:commons-compress:1.27.0")
-
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

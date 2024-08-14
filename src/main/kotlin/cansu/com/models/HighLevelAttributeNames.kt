@@ -14,7 +14,7 @@ enum class AttributeNameEnums {
     mood_party,
     mood_relaxed,
     mood_sad,
-    mood_mirex,
+    moods_mirex,
     voice_instrumental,
     timbre,
     tonal_atonal;
