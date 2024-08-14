@@ -215,6 +215,9 @@ fun Route.trackInfoRoute(db: Database) {
 fun Route.albumRoute(httpClient: OkHttpClient) {
     get("/album/cover/{mbid}") {
         val mbid = call.parameters["mbid"]
+        if (mbid == null) {
+            call.respond(HttpStatusCode.BadRequest, )
+        }
         val apiURI = "https://coverartarchive.org/release/$mbid"
         var errorMessage: Errors? = null
         val coverArt: CoverArt = suspendCancellableCoroutine { continuation ->
@@ -245,5 +248,8 @@ fun Route.albumRoute(httpClient: OkHttpClient) {
             return@get
         }
         call.respond(HttpStatusCode.OK, coverArt)
+    }
+    get("/album/info/{title}") {
+        val title = call.parameters["mbid"].let {  }
     }
 }

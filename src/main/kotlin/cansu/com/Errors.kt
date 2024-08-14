@@ -29,9 +29,17 @@ sealed class Errors(val code: HttpStatusCode, val response: ErrorResponse) {
         HttpStatusCode.BadRequest,
         ErrorResponse("DJ-0004", "Response is not successful, please check MBID.")
     )
+    object DJ0005: Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0005", "Album title is required for querying album info with /album/info/{title} route.")
+    )
     object DJ0006: Errors(
         HttpStatusCode.BadRequest,
         ErrorResponse("DJ-0006", "Metadata in uploaded JSON is not an 'Object'.")
+    )
+    object DJ0007: Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0007", "MBID is required for querying album cover art with /album/cover/{mbid}.")
     )
     suspend fun respond(call: ApplicationCall) {
         call.respond(code, response)
