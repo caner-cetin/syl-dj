@@ -4,13 +4,21 @@ import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
+@OptIn(DelicateCoroutinesApi::class)
 fun main(args: Array<String>) {
+    val ftp = GetFTPServer()
+    GlobalScope.launch {
+        ftp.start()
+    }
     io.ktor.server.netty.EngineMain.main(args)
 }
 

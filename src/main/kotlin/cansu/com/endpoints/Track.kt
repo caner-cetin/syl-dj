@@ -24,7 +24,9 @@ import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.json.JSONException
+import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.sql.Connection
 import java.util.*
 import kotlin.coroutines.resume
@@ -43,9 +45,9 @@ fun Route.uploadRoute(db: Database) {
     )
     post("/upload/highlevel") {
         val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
-        val bodyStream = call.receiveStream()
+        val tarStream = call.receiveStream()
         val jsonElements: Sequence<Pair<String, Map<String, JsonElement>>> = sequence {
-            bodyStream.buffered().use { bufferedInputStream ->
+            tarStream.buffered().use { bufferedInputStream ->
                 TarArchiveInputStream(bufferedInputStream).use { tarInput ->
                     while (true) {
                         val entry = tarInput.nextEntry ?: break

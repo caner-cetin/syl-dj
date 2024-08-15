@@ -54,4 +54,12 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.ktor:ktor-server-netty")
     implementation("com.zaxxer:HikariCP:5.1.0")
+    //
+    // ftp server
+    //
+    implementation("org.apache.ftpserver:ftpserver-core:1.2.0")
+    implementation("org.apache.ftpserver:ftplet-api:1.2.0")
+    implementation("org.netbeans.external:slf4j-api:RELEASE113")
+    implementation("org.apache.mina:mina-core:2.2.3")
+    implementation("org.slf4j:slf4j-simple:2.1.0-alpha1")
 }

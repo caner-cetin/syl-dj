@@ -27,6 +27,7 @@ services:
       - "8080:8080"
       - "9010:9010"
       - "5005:5005"
+      - "2221:2221"
     depends_on:
       postgres:
         condition: service_healthy
