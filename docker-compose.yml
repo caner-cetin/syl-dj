@@ -25,6 +25,7 @@ services:
       dockerfile: backend.Dockerfile
     ports:
       - "8080:8080"
+      - "5005:5005"
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,7 +34,8 @@ services:
     environment:
       <<: *psql-variables
       POSTGRES_URL: postgres
-
+      _JAVA_OPTIONS: -Xmx1024m -Xms1024m
+      JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n
 networks:
   postgres_backend_bridge:
     driver: bridge

@@ -1,9 +1,6 @@
 package cansu.com
 
-import cansu.com.models.AttributeNameEnums
-import cansu.com.models.HighLevelAttributes
-import cansu.com.models.MirexClusters
-import cansu.com.models.Tracks
+import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
@@ -34,7 +31,7 @@ fun Application.module() {
     transaction(DatabaseSupplier(ApplicationConfig(null))) {
         exec("CREATE EXTENSION  IF NOT EXISTS vector")
         exec(AttributeNameEnums.CreatePSQLTypeIfNotExists())
-        SchemaUtils.createMissingTablesAndColumns(HighLevelAttributes, Tracks, MirexClusters)
+        SchemaUtils.createMissingTablesAndColumns(HighLevelAttributes, Tracks, MirexClusters, Release)
     }
     install(Koin) {
         slf4jLogger()

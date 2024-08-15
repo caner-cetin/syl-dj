@@ -1,11 +1,7 @@
 package cansu.com.endpoints
 
-import cansu.com.ErrorResponse
 import cansu.com.Errors
 import cansu.com.models.*
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -14,12 +10,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.*
-import kotlinx.coroutines.future.await
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import okhttp3.*
 import okhttp3.Request
@@ -27,21 +19,24 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.json.JSONObject
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.io.FileUtils
 import org.json.JSONException
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.net.http.HttpResponse.BodyHandlers
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.RandomAccessFile
+import java.nio.MappedByteBuffer
+import java.nio.channels.Channels
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.coroutines.resume
+import kotlin.io.path.deleteIfExists
 
-fun Route.trackInfoRoute(db: Database) {
+fun Route.uploadRoute(db: Database) {
     @Serializable
     data class TrackError(
         val filename: String,
@@ -52,7 +47,7 @@ fun Route.trackInfoRoute(db: Database) {
     class TrackInfoUploadHighLevelResponse(
         val errors: MutableList<TrackError>
     )
-    post("/track/info/upload/highlevel") {
+    post("/upload/highlevel") {
         val multipart = call.receiveMultipart()
         val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
 
@@ -100,8 +95,11 @@ fun Route.trackInfoRoute(db: Database) {
                                         }
 
                                         val musicBrainzArtistIDs = tags.optJSONArray("musicbrainz_artistid")?.toList()
-                                            ?.filterIsInstance<String>()
-                                        val musicBrainzAlbumID = tags.optJSONArray("musicbrainz_albumid")?.optString(0)
+                                            ?.filterIsInstance<String>()?.map {
+                                                UUID.fromString(it)
+                                            }
+                                        val musicBrainzAlbumID =
+                                            UUID.fromString(tags.optJSONArray("musicbrainz_albumid")?.optString(0))
 
                                         trackDataList.add(
                                             TrackData(
@@ -210,13 +208,46 @@ fun Route.trackInfoRoute(db: Database) {
         }
         call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
     }
+    post("/upload/releases") {
+        val multipart = call.receiveMultipart()
+        var linesProcessed = 0
+        multipart.forEachPart { part ->
+            if (part is PartData.FileItem) {
+                val tempFile = kotlin.io.path.createTempFile(prefix = "releases_upload", suffix = ".tmp")
+                part.streamProvider().use { input ->
+                    tempFile.toFile().outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                val lineSequence = sequence {
+                    FileUtils.lineIterator(tempFile.toFile(), "UTF-8").use { lineIterator ->
+                        while (lineIterator.hasNext()) {
+                            yield(lineIterator.nextLine())
+                        }
+                    }
+                }
+                val chunkSize = 1000
+                lineSequence.map {
+                    line -> val spl = line.split("\t")
+                    ReleaseData(
+                        id = spl[0].toInt(),
+                        gid = UUID.fromString(spl[1]),
+                        name = spl[2],
+                        language = spl[7]
+                    )
+                }.chunked(chunkSize).forEach { chunk -> ReleaseData.InsertChunk(chunk, db); linesProcessed += chunk.size }
+                tempFile.toFile().delete()
+            }
+        }
+        call.respond(HttpStatusCode.Created, "Processed $linesProcessed records.")
+    }
 }
 
 fun Route.albumRoute(httpClient: OkHttpClient) {
     get("/album/cover/{mbid}") {
         val mbid = call.parameters["mbid"]
         if (mbid == null) {
-            call.respond(HttpStatusCode.BadRequest, )
+            call.respond(HttpStatusCode.BadRequest)
         }
         val apiURI = "https://coverartarchive.org/release/$mbid"
         var errorMessage: Errors? = null
@@ -250,6 +281,8 @@ fun Route.albumRoute(httpClient: OkHttpClient) {
         call.respond(HttpStatusCode.OK, coverArt)
     }
     get("/album/info/{title}") {
-        val title = call.parameters["mbid"].let {  }
+        call.respond(HttpStatusCode.NotImplemented)
     }
+
+
 }

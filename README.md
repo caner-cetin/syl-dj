@@ -12,4 +12,4 @@ Work in progress. Currently you can:
 - [x] Album cover query API
 
 ### Documentation
-see [documentation.md](DOCUMENTATION.md)
+wip
