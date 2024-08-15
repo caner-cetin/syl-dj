@@ -25,6 +25,7 @@ services:
       dockerfile: backend.Dockerfile
     ports:
       - "8080:8080"
+      - "9010:9010"
       - "5005:5005"
     depends_on:
       postgres:
@@ -34,8 +35,18 @@ services:
     environment:
       <<: *psql-variables
       POSTGRES_URL: postgres
-      _JAVA_OPTIONS: -Xmx1024m -Xms1024m
+      _JAVA_OPTIONS: >
+        -Xmx2048m
+        -Xms2048m
+        -Dcom.sun.management.jmxremote=true
+        -Dcom.sun.management.jmxremote.rmi.port=9010
+        -Dcom.sun.management.jmxremote.port=9010
+        -Dcom.sun.management.jmxremote.local.only=false
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Djava.rmi.server.hostname=127.0.0.1
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n
+
 networks:
   postgres_backend_bridge:
     driver: bridge

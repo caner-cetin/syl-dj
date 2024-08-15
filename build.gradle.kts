@@ -27,25 +27,13 @@ repositories {
     mavenCentral()
 }
 
-sqldelight {
-    databases {
-        create("db") {
-            packageName.set("com.cansu.syl-dj")
-            srcDirs("sqldelight")
-            dialect("app.cash.sqldelight:postgresql-dialect:2.0.2")
-        }
-    }
-}
-
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm")
     implementation("io.ktor:ktor-server-content-negotiation-jvm")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("org.postgresql:postgresql:$postgres_version")
-    implementation("com.h2database:h2:$h2_version")
     implementation("io.ktor:ktor-server-auth-jvm")
     implementation("io.ktor:ktor-server-auth-jwt-jvm")
-    implementation("io.ktor:ktor-server-netty-jvm")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("io.ktor:ktor-server-config-yaml")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
@@ -64,4 +52,6 @@ dependencies {
     // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
     implementation("org.apache.commons:commons-compress:1.27.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.ktor:ktor-server-netty")
+    implementation("com.zaxxer:HikariCP:5.1.0")
 }

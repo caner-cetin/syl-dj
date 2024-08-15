@@ -9,33 +9,27 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.*
 import okhttp3.*
-import okhttp3.Request
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.json.JSONObject
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.FileUtils
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.json.JSONException
-import java.io.BufferedReader
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
-import java.io.RandomAccessFile
-import java.nio.MappedByteBuffer
-import java.nio.channels.Channels
-import java.nio.channels.FileChannel
-import java.nio.file.StandardOpenOption
+import java.sql.Connection
 import java.util.*
 import kotlin.coroutines.resume
-import kotlin.io.path.deleteIfExists
 
+@OptIn(ExperimentalCoroutinesApi::class)
 fun Route.uploadRoute(db: Database) {
     @Serializable
     data class TrackError(
@@ -48,162 +42,171 @@ fun Route.uploadRoute(db: Database) {
         val errors: MutableList<TrackError>
     )
     post("/upload/highlevel") {
-        val multipart = call.receiveMultipart()
         val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
+        val bodyStream = call.receiveStream()
+        val jsonElements: Sequence<Pair<String, Map<String, JsonElement>>> = sequence {
+            bodyStream.buffered().use { bufferedInputStream ->
+                TarArchiveInputStream(bufferedInputStream).use { tarInput ->
+                    while (true) {
+                        val entry = tarInput.nextEntry ?: break
+                        if (!entry.isDirectory && entry.name.endsWith(".json")) {
 
-        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        val trackDataList = Collections.synchronizedList(mutableListOf<TrackData>())
-        val highLevelAttributeDataList = Collections.synchronizedList(mutableListOf<HighLevelAttributeData>())
-        val mirexClusterDataList = Collections.synchronizedList(mutableListOf<MirexClusterData>())
-
-        multipart.forEachPart { part ->
-            if (part is PartData.FileItem) {
-                val tarBytes = part.streamProvider().use { it.readBytes() }
-                ByteArrayInputStream(tarBytes).use { fileInputStream ->
-                    TarArchiveInputStream(fileInputStream).use { tarInput ->
-                        var entry = tarInput.nextEntry
-                        while (entry != null) {
-                            if (!entry.isDirectory && entry.name.endsWith(".json")) {
-                                val content = ByteArrayOutputStream().use { output ->
-                                    tarInput.copyTo(output)
-                                    output.toByteArray()
-                                }
-                                val jsonString = content.toString(Charsets.UTF_8)
-                                val json = JSONObject(jsonString)
-                                val trackUUID = UUID.randomUUID()
-
-                                scope.launch {
-                                    try {
-                                        val metadata = json.getJSONObject("metadata")
-                                        val tags = metadata.getJSONObject("tags")
-                                        val trackTitle = tags.getJSONArray("title")[0].toString()
-                                        val trackArtists = (try {
-                                            tags.getJSONArray("artists")
-                                        } catch (e: JSONException) {
-                                            tags.getJSONArray("artist")
-                                        }).toList().filterIsInstance<String>()
-
-                                        if (trackArtists.isEmpty()) {
-                                            errorList.add(TrackError(entry.name, Errors.DJ0001.codeAndMessage()))
-                                            return@launch
-                                        }
-
-                                        val trackAlbum = tags.optJSONArray("album")?.optString(0) ?: ""
-                                        if (trackAlbum.isEmpty()) {
-                                            errorList.add(TrackError(entry.name, Errors.DJ0002.codeAndMessage()))
-                                            return@launch
-                                        }
-
-                                        val musicBrainzArtistIDs = tags.optJSONArray("musicbrainz_artistid")?.toList()
-                                            ?.filterIsInstance<String>()?.map {
-                                                UUID.fromString(it)
-                                            }
-                                        val musicBrainzAlbumID =
-                                            UUID.fromString(tags.optJSONArray("musicbrainz_albumid")?.optString(0))
-
-                                        trackDataList.add(
-                                            TrackData(
-                                                id = trackUUID,
-                                                title = trackTitle,
-                                                artists = trackArtists,
-                                                album = trackAlbum,
-                                                musicBrainzAlbumID = musicBrainzAlbumID,
-                                                musicBrainzArtistIDs = musicBrainzArtistIDs,
-                                            )
-                                        )
-
-                                        val highlevel = json.getJSONObject("highlevel")
-                                        highlevel.keys().forEach { highLevelAttributeKey ->
-                                            val attr = highlevel.getJSONObject(highLevelAttributeKey)
-                                            AttributeNameEnums.entries.find { it.name == highLevelAttributeKey }
-                                                ?.let { attrName ->
-                                                    if (attrName == AttributeNameEnums.moods_mirex) {
-                                                        val clusters = attr.getJSONObject("all")
-                                                        val clusterNames = listOf(
-                                                            "Cluster1",
-                                                            "Cluster2",
-                                                            "Cluster3",
-                                                            "Cluster4",
-                                                            "Cluster5"
-                                                        )
-                                                        val clusterObjects = clusterNames.associateWith {
-                                                            clusters.getDouble(it).toFloat()
-                                                        }
-                                                        mirexClusterDataList.add(
-                                                            MirexClusterData(
-                                                                trackID = trackUUID,
-                                                                cluster = clusterObjects.values.toList(),
-                                                                id = null,
-                                                            )
-                                                        )
-                                                    } else {
-                                                        highLevelAttributeDataList.add(
-                                                            HighLevelAttributeData(
-                                                                trackID = trackUUID,
-                                                                attributeName = attrName,
-                                                                value = attr.getString("value"),
-                                                                all_values = Json.parseToJsonElement(
-                                                                    attr.getJSONObject(
-                                                                        "all"
-                                                                    ).toString()
-                                                                ).jsonObject,
-                                                                probability = attr.getFloat("probability")
-                                                            )
-                                                        )
-                                                    }
-                                                }
-                                        }
-                                    } catch (e: JSONException) {
-                                        errorList.add(TrackError(entry.name, Errors.DJ0006.codeAndMessage()))
-                                    }
+                            val jsonString = tarInput.bufferedReader().readText()
+                            val json: Map<String, JsonElement> =
+                                Json.parseToJsonElement(jsonString).jsonObject
+                            val filteredJsons = json.filterValues {
+                                try {
+                                    it.jsonNull
+                                    // if we are still here, accessing jsonNull did not throw any exceptions
+                                    // so we are safe to say that this element is null
+                                    // filtered
+                                    false
+                                } catch (e: IllegalArgumentException) {
+                                    // it is anything other than json null
+                                    true
                                 }
                             }
-                            entry = tarInput.nextEntry
+                            yield(Pair(entry.name, filteredJsons))
                         }
                     }
                 }
-                part.dispose()
             }
         }
+        val chunkSize = 1000
 
-        scope.coroutineContext.job.children.forEach { it.join() }
+        val dataflow: Flow<Triple<TrackData, List<HighLevelAttributeData>, MirexClusterData>> = flow {
+            for (chunk in jsonElements.chunked(chunkSize)) {
+                for ((fileName, json) in chunk) {
+                    val trackUUID = UUID.randomUUID()
+                    try {
+                        val metadata: JsonObject? = json["metadata"]?.jsonObject
+                        if (metadata == null) {
+                            errorList.add(TrackError(fileName, Errors.DJ0008.codeAndMessage()))
+                            return@flow
+                        }
+                        val tags = metadata["tags"]?.jsonObject
+                        if (tags == null) {
+                            errorList.add(TrackError(fileName, Errors.DJ0009.codeAndMessage()))
+                            return@flow
+                        }
+                        val trackTitle = tags.getValue("title").jsonArray[0].toString()
+                        val trackArtistArray: JsonArray = (try {
+                            tags.getValue("artist").jsonArray
+                        } catch (e: NoSuchElementException) {
+                            tags.getValue("artists").jsonArray
+                        })
+                        val trackArtists = trackArtistArray.map { it.jsonPrimitive.toString() }
 
-        val uniqueTrackIds = mutableSetOf<UUID>()
-        val uniqueTracks = transaction(db) {
-            val existingTracks = Tracks
-                .select(Tracks.title, Tracks.album, Tracks.artists)
-                .map { Triple(it[Tracks.title], it[Tracks.album], it[Tracks.artists]) }
-                .toSet()
+                        if (trackArtists.isEmpty()) {
+                            errorList.add(TrackError(fileName, Errors.DJ0001.codeAndMessage()))
+                            return@flow
+                        }
+                        val trackAlbum = tags["album"]?.jsonArray?.get(0).toString()
+                        if (trackAlbum.isEmpty()) {
+                            errorList.add(TrackError(fileName, Errors.DJ0002.codeAndMessage()))
+                            return@flow
+                        }
 
-            trackDataList.filter { track ->
-                val isUnique = Triple(track.title, track.album, track.artists) !in existingTracks
-                if (isUnique) uniqueTrackIds.add(track.id)
-                isUnique
+                        val musicBrainzArtistIDs =
+                            tags["musicbrainz_artistid"]?.jsonArray?.map { it.jsonPrimitive.toString() }
+                        val musicBrainzAlbumID = tags["musicbrainz_albumid"]?.jsonArray?.get(0).toString()
+                        var processedTrackData = TrackData(
+                            id = trackUUID,
+                            title = trackTitle,
+                            artists = trackArtists,
+                            album = trackAlbum,
+                            musicBrainzAlbumID = musicBrainzAlbumID,
+                            musicBrainzArtistIDs = musicBrainzArtistIDs,
+                        )
+                        var processedHighLevelAttributeData = mutableListOf<HighLevelAttributeData>()
+                        var processedMirexClusterData: MirexClusterData? = null
+                        val highlevel = json["highlevel"]?.jsonObject
+                        if (highlevel == null) {
+                            errorList.add(TrackError(fileName, Errors.DJ0010.codeAndMessage()))
+                            return@flow
+                        }
+                        highlevel.keys.forEach { highLevelAttributeKey ->
+                            val attr = highlevel[highLevelAttributeKey]!!.jsonObject
+                            AttributeNameEnums.entries.find { it.name == highLevelAttributeKey }
+                                ?.let { attrName ->
+                                    if (attrName == AttributeNameEnums.moods_mirex) {
+                                        val clusters = attr["all"]?.jsonObject!!
+                                        val clusterNames = listOf(
+                                            "Cluster1",
+                                            "Cluster2",
+                                            "Cluster3",
+                                            "Cluster4",
+                                            "Cluster5"
+                                        )
+                                        val clusterObjects = clusterNames.associateWith {
+                                            clusters[it]!!.jsonPrimitive.float
+                                        }
+                                        processedMirexClusterData = MirexClusterData(
+                                            trackID = trackUUID,
+                                            cluster = clusterObjects.values.toList(),
+                                            id = UUID.randomUUID(),
+                                        )
+                                    } else {
+                                        processedHighLevelAttributeData.add(
+                                            HighLevelAttributeData(
+                                                id = UUID.randomUUID(),
+                                                trackID = trackUUID,
+                                                attributeName = attrName,
+                                                value = attr["value"].toString(),
+                                                all_values = Json.parseToJsonElement(
+                                                    attr["all"].toString()
+                                                ).jsonObject,
+                                                probability = attr["probability"]?.jsonPrimitive?.float
+                                                    ?: 0.0f
+                                            )
+                                        )
+                                    }
+                                }
+                        }
+                        emit(Triple(processedTrackData, processedHighLevelAttributeData, processedMirexClusterData!!))
+                    } catch (e: JSONException) {
+                        errorList.add(TrackError(fileName, Errors.DJ0006.codeAndMessage()))
+                    }
+                }
             }
-        }
+        }.flowOn(Dispatchers.Default)
 
-        val uniqueTrackAttrs = highLevelAttributeDataList.filter { it.trackID in uniqueTrackIds }
-        val uniqueMirexClusters = mirexClusterDataList.filter { it.trackID in uniqueTrackIds }
+        val databaseThresholdSize = 100
+        val trackDataList: MutableList<TrackData> = mutableListOf()
+        val highLevelAttributeDataList = mutableListOf<HighLevelAttributeData>()
+        val mirexClusterDataList = mutableListOf<MirexClusterData>()
 
-        transaction(db) {
-            Tracks.batchInsert(uniqueTracks, shouldReturnGeneratedValues = false) {
-                this[Tracks.id] = it.id
-                this[Tracks.title] = it.title
-                this[Tracks.album] = it.album
-                this[Tracks.artists] = it.artists
-                this[Tracks.musicbrainzAlbumID] = it.musicBrainzAlbumID
-                this[Tracks.musicbrainzArtistIDs] = it.musicBrainzArtistIDs
-            }
-            HighLevelAttributes.batchInsert(uniqueTrackAttrs, shouldReturnGeneratedValues = false) {
-                this[HighLevelAttributes.references_to_track_id] = it.trackID
-                this[HighLevelAttributes.attributeName] = it.attributeName
-                this[HighLevelAttributes.value] = it.value
-                this[HighLevelAttributes.probability] = it.probability
-                this[HighLevelAttributes.all_values] = it.all_values
-            }
-            MirexClusters.batchInsert(uniqueMirexClusters, shouldReturnGeneratedValues = false) {
-                this[MirexClusters.trackID] = it.trackID
-                this[MirexClusters.cluster] = it.cluster
+        withContext(Dispatchers.Default) {
+            dataflow
+                .collect { data ->
+                    trackDataList.add(data.first)
+                    highLevelAttributeDataList.addAll(data.second)
+                    mirexClusterDataList.add(data.third)
+
+                    if (trackDataList.size >= databaseThresholdSize) {
+                        newSuspendedTransaction(Dispatchers.IO, db, Connection.TRANSACTION_READ_COMMITTED) {
+                            val connection = this.connection.connection as Connection
+                            connection.batchInsertTracks(trackDataList)
+                            trackDataList.clear()
+                            connection.batchInsertHighLevelAttributes(highLevelAttributeDataList)
+                            highLevelAttributeDataList.clear()
+                            connection.batchInsertMirexClusters(mirexClusterDataList)
+                            mirexClusterDataList.clear()
+                        }
+                    }
+                }
+            // Insert any remaining data
+            if (trackDataList.isNotEmpty() || highLevelAttributeDataList.isNotEmpty() || mirexClusterDataList.isNotEmpty()) {
+                // todo: dry
+                newSuspendedTransaction(Dispatchers.IO, db, Connection.TRANSACTION_READ_COMMITTED) {
+                    val connection = this.connection.connection as Connection
+                    connection.batchInsertTracks(trackDataList)
+                    trackDataList.clear()
+                    connection.batchInsertHighLevelAttributes(highLevelAttributeDataList)
+                    highLevelAttributeDataList.clear()
+                    connection.batchInsertMirexClusters(mirexClusterDataList)
+                    mirexClusterDataList.clear()
+                }
             }
         }
         call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
@@ -227,15 +230,16 @@ fun Route.uploadRoute(db: Database) {
                     }
                 }
                 val chunkSize = 1000
-                lineSequence.map {
-                    line -> val spl = line.split("\t")
+                lineSequence.map { line ->
+                    val spl = line.split("\t")
                     ReleaseData(
                         id = spl[0].toInt(),
                         gid = UUID.fromString(spl[1]),
                         name = spl[2],
                         language = spl[7]
                     )
-                }.chunked(chunkSize).forEach { chunk -> ReleaseData.InsertChunk(chunk, db); linesProcessed += chunk.size }
+                }.chunked(chunkSize)
+                    .forEach { chunk -> ReleaseData.InsertChunk(chunk, db); linesProcessed += chunk.size }
                 tempFile.toFile().delete()
             }
         }

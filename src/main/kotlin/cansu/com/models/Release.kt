@@ -1,8 +1,10 @@
 package cansu.com.models
 
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import java.util.UUID
+import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.batchInsert
+import java.util.*
 
 object Release : Table("releases") {
     val id: Column<Int> = integer("id")
@@ -19,13 +21,11 @@ class ReleaseData(
 ) {
     companion object {
         fun InsertChunk(chunk: List<ReleaseData>, db: Database) {
-            transaction(db) {
-                Release.batchInsert(chunk, shouldReturnGeneratedValues = false) {
-                    this[Release.id] = it.id
-                    this[Release.gid] = it.gid!!
-                    this[Release.language] = it.language
-                    this[Release.name] = it.name
-                }
+            Release.batchInsert(chunk, shouldReturnGeneratedValues = false) {
+                this[Release.id] = it.id
+                this[Release.gid] = it.gid!!
+                this[Release.language] = it.language
+                this[Release.name] = it.name
             }
         }
     }

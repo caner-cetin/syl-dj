@@ -1,17 +1,21 @@
 package cansu.com.plugins
 
-import io.ktor.server.config.ApplicationConfig
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
 
 fun DatabaseSupplier(config: ApplicationConfig): Database {
-    val url = config.property("db.postgres.url").getString()
-    val user = config.property("db.postgres.user").getString()
-    val password = config.property("db.postgres.password").getString()
-    val db = config.property("db.postgres.database").getString()
-    return Database.connect(
-    url = "jdbc:postgresql://$url/$db?user=$user&password=$password&reWriteBatchedInserts=true",
-    driver = "org.postgresql.Driver",
-    )
+    val dbcfg = HikariConfig().apply {
+        jdbcUrl = "jdbc:postgresql://${config.property("db.postgres.url").getString()}/${config.property("db.postgres.database").getString()}"
+        username = config.property("db.postgres.user").getString()
+        password = config.property("db.postgres.password").getString()
+        isAutoCommit = false
+        maximumPoolSize = 20
+    }
+    dbcfg.addDataSourceProperty("reWriteBatchedInserts", true)
+    val ds = HikariDataSource(dbcfg)
+    return Database.connect(datasource = ds)
 }
 
 class DatabaseFactory(private val config: ApplicationConfig) {

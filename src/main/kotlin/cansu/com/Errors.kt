@@ -1,10 +1,9 @@
 package cansu.com
 
-import io.ktor.http.HttpStatusCode
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
-import okio.IOException
 
 @Serializable
 class ErrorResponse (
@@ -40,6 +39,18 @@ sealed class Errors(val code: HttpStatusCode, val response: ErrorResponse) {
     object DJ0007: Errors(
         HttpStatusCode.BadRequest,
         ErrorResponse("DJ-0007", "MBID is required for querying album cover art with /album/cover/{mbid}.")
+    )
+    object DJ0008: Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0008", "Metadata information does not exist for track file, skipping.")
+    )
+    object DJ0009: Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0008", "Tag information in metadata does not exist for track file, skipping.")
+    )
+    object DJ0010: Errors(
+        HttpStatusCode.BadRequest,
+        ErrorResponse("DJ-0010", "High level information does not exist for track file, skipping.")
     )
     suspend fun respond(call: ApplicationCall) {
         call.respond(code, response)

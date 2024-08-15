@@ -6,9 +6,9 @@ import io.ktor.server.application.*
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
-import org.koin.dsl.module
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
