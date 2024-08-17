@@ -1,3 +1,4 @@
+import java.net.URI
 
 val kotlin_version: String by project
 val logback_version: String by project
@@ -9,7 +10,6 @@ plugins {
     kotlin("jvm") version "2.0.10"
     id("io.ktor.plugin") version "2.3.12"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.10"
-    id("app.cash.sqldelight") version "2.0.2"
 }
 
 group = "cansu.com"
@@ -63,4 +63,8 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.1.0-alpha1")
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation("org.slf4j:slf4j-api:2.0.16")
+    // https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.squareup.moshi:moshi:1.14.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.14.0")
 }

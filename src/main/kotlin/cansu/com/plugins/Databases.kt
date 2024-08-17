@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
+import java.sql.Connection
 
 fun DatabaseSupplier(config: ApplicationConfig): Database {
     val dbcfg = HikariConfig().apply {
@@ -12,6 +13,7 @@ fun DatabaseSupplier(config: ApplicationConfig): Database {
         password = config.property("db.postgres.password").getString()
         isAutoCommit = false
         maximumPoolSize = 20
+        transactionIsolation = "TRANSACTION_SERIALIZABLE"
     }
     dbcfg.addDataSourceProperty("reWriteBatchedInserts", true)
     val ds = HikariDataSource(dbcfg)

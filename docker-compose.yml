@@ -60,7 +60,12 @@ services:
       FTP_ADMIN_PASSWORD: ${FTP_ADMIN_PASSWORD}
       FTP_ADMIN_HOME_DIRECTORY: ${FTP_ADMIN_HOME_DIRECTORY}
       FTP_PASSIVE_PORT_RANGE: ${FTP_PASSIVE_PORT_RANGE}
+    volumes:
+      - ftp_upload_volume:${FTP_ADMIN_HOME_DIRECTORY:-/tmp/}
 
 networks:
   postgres_backend_bridge:
     driver: bridge
+
+volumes:
+  ftp_upload_volume:

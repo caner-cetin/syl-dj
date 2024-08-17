@@ -1,8 +1,6 @@
 package cansu.com.models
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.Column
@@ -39,12 +37,12 @@ object HighLevelAttributes: UUIDTable("high_level_attributes") {
 }
 
 data class HighLevelAttributeData(
-    val id: UUID,
+    var id: UUID,
     val trackID: UUID,
     val attributeName: AttributeNameEnums,
     val value: String,
     val probability: Float,
-    val all_values: JsonObject
+    val all_values: List<Float>
 ) {
     companion object {
         fun fromRow(resultRow: ResultRow) = HighLevelAttributeData(
@@ -53,7 +51,7 @@ data class HighLevelAttributeData(
             attributeName = resultRow[HighLevelAttributes.attributeName],
             value = resultRow[HighLevelAttributes.value],
             probability = resultRow[HighLevelAttributes.probability],
-            all_values = resultRow[HighLevelAttributes.all_values],
+            all_values = resultRow[HighLevelAttributes.all_values].jsonArray.map { it.jsonPrimitive.float },
         )
     }
 }
@@ -61,7 +59,7 @@ data class HighLevelAttributeData(
 fun Connection.batchInsertHighLevelAttributes(attributes: List<HighLevelAttributeData>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
     val copyData = attributes.joinToString("\n") { attr ->
-        "${attr.id}\t${attr.trackID}\t${attr.attributeName}\t${attr.value}\t${attr.probability}\t${attr.all_values.jsonObject}"
+        "${attr.id}\t${attr.trackID}\t${attr.attributeName}\t${attr.value}\t${attr.probability}\t[${attr.all_values.joinToString()}]"
     }
     val copySql = """
         COPY high_level_attributes (id, track_id, attribute_name, value, probability, all_values)

@@ -20,7 +20,7 @@ object Tracks : UUIDTable("tracks") {
 
 class TrackData(
     val id: UUID,
-    val artists: List<String>,
+    val artists: List<String>? = null,
     val album: String,
     val title: String,
     val musicBrainzAlbumID: String?,
@@ -29,8 +29,9 @@ class TrackData(
 
 fun Connection.batchInsertTracks(tracks: List<TrackData>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
-    val copyData = tracks.joinToString("\n") { track ->
-        val artists = track.artists.map { it.replace('"'.toString(), "'") }
+    val trackData = tracks.filter { !it.artists.isNullOrEmpty() }
+    val copyData = trackData.joinToString("\n") { track ->
+        val artists = track.artists!!.map { it.replace('"'.toString(), "'") }
         "${track.id}\t${track.title}\t${track.album}\t{${artists.joinToString(",")}}\t${track.musicBrainzAlbumID}\t{${track.musicBrainzArtistIDs?.joinToString(",")}}"
     }
 
