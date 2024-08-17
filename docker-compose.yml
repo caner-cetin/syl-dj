@@ -28,6 +28,8 @@ services:
       - "9010:9010"
       - "5005:5005"
       - "2221:2221"
+      # not required if FTP_ENABLED is set to false
+      - ${FTP_PASSIVE_PORT_RANGE}:${FTP_PASSIVE_PORT_RANGE}
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,6 +38,9 @@ services:
     environment:
       <<: *psql-variables
       POSTGRES_URL: postgres
+      #
+      #
+      #
       _JAVA_OPTIONS: >
         -Xmx2048m
         -Xms2048m
@@ -47,6 +52,14 @@ services:
         -Dcom.sun.management.jmxremote.ssl=false
         -Djava.rmi.server.hostname=127.0.0.1
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n
+      #
+      #
+      #
+      FTP_ENABLED: ${FTP_ENABLED}
+      FTP_ADMIN_USER: ${FTP_ADMIN_USER}
+      FTP_ADMIN_PASSWORD: ${FTP_ADMIN_PASSWORD}
+      FTP_ADMIN_HOME_DIRECTORY: ${FTP_ADMIN_HOME_DIRECTORY}
+      FTP_PASSIVE_PORT_RANGE: ${FTP_PASSIVE_PORT_RANGE}
 
 networks:
   postgres_backend_bridge:

@@ -9,8 +9,10 @@ Not really a *dj*, but a music recommendation engine built in kotlin.
   - [x] Track Info 
   - [x] MIREX Data supported with `pgvector` database for nearest neighbor search in moods
   - [x] Small-medium sized TAR archive support from [HTTP/POST body](https://everything.curl.dev/http/post/binary.html) directly
-  - [ ] Large sized TAR archive support with FTP
+  - [x] Large sized TAR archive support with FTP
   - [ ] Password protection for upload methods in both HTTP route and FTP server
+    - [X] FTP
+    - [ ] HTTP
 - [ ] Upload [MusicBrainz](https://wiki.musicbrainz.org/Main_Page) data dumps to system.
   - [x] Release Info (id, gid, name, language ID)s
 - [x] Remote debug and VisualVM support

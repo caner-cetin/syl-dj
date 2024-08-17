@@ -43,9 +43,65 @@ fun Route.uploadRoute(db: Database) {
     class TrackInfoUploadHighLevelResponse(
         val errors: MutableList<TrackError>
     )
+    /**
+     * POST /upload/highlevel
+     *
+     * Uploads AcousticBrainz high level data dump to database https://data.metabrainz.org/pub/musicbrainz/acousticbrainz/dumps/
+     * For sample uploads, or any small to medium files, supply the TAR dump from POST body directly.
+     * curl -v --request POST -T "/file/location" http://0.0.0.0:8080/upload/highlevel
+     *
+     * For large sized uploads (POST body does not support anything above 100 mbs), you have two choices.
+     * 1. Upload the dump from your system to the server with FTP
+     * 2. Let server download the dump
+     * For local testing, first one is the most feasible choice. Yes, I am too lazy to bind dump folder in docker-compose.
+     * FTP admin's username, password, home directory can be set in the environment variables at Docker Compose file.
+     *
+     * For FTP:
+     *  - Download the dump as usual.
+     *  - Upload the dump:
+     *      ```
+     *      curl --user "name:pwd" -T "/file/location" ftp://localhost:2221/
+     *      ```
+     *  - Note the directory you just uploaded. By uploading to ftp://localhost:2221/, you are uploading to the
+     *    specified home directory in Docker Compose.
+     *  - Fill query parameter "fileLocation" based on the directory uploaded. For example, if the dump is uploaded with
+     *      ```
+     *      curl --user "sylftp:3131" -T /Users/canercetin/homework/catgirl.tar ftp://localhost:2221/
+     *      ```
+     *  - fileLocation should be set to `/homedirectory/catgirl.tar`.
+     *  In full:
+     *      ```
+     *      ~ ➤ curl --user "sylftp:b7c790faf3c5a7b230a3fff9cf9cb319" -T /Users/canercetin/Downloads/abrainz/acousticbrainz-highlevel-sample-json-20220623-0.tar ftp://localhost:2221/
+     *          % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+     *                                  Dload  Upload   Total   Spent    Left  Speed
+     *          100 1080M    0     0  100 1080M      0   107M  0:00:10  0:00:10 --:--:--  113M
+     *      ~ ➤ curl -v --request POST "http://0.0.0.0:8080/upload/highlevel?fileLocation=/sylftp/upload/acousticbrainz-highlevel-sample-json-20220623-0.tar"
+     *          *   Trying 0.0.0.0:8080...
+     *          * Connected to 0.0.0.0 (0.0.0.0) port 8080
+     *          > POST /upload/highlevel?fileLocation=/sylftp/upload/acousticbrainz-highlevel-sample-json-20220623-0.tar HTTP/1.1
+     *          > Host: 0.0.0.0:8080
+     *          > User-Agent: curl/8.6.0
+     *          > Accept:
+     *          >
+     *          < HTTP/1.1 200 OK
+     *          < Content-Length: 340
+     *          < Content-Type: application/json
+     *     ```
+     *
+     *
+     * For downloading the dump from server directly:
+     *  First of all, ensure that FTP is disabled on Docker Compose. FTP's only purpose is to feed dumps from host machine for local testing.
+     *  wip
+     */
     post("/upload/highlevel") {
         val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
-        val tarStream = call.receiveStream()
+        val fileLocation = call.request.queryParameters["fileLocation"]
+        val callStream = call.receiveStream()
+        val tarStream: InputStream = if (fileLocation != null) {
+            File(fileLocation).inputStream()
+        } else {
+            callStream
+        }
         val jsonElements: Sequence<Pair<String, Map<String, JsonElement>>> = sequence {
             tarStream.buffered().use { bufferedInputStream ->
                 TarArchiveInputStream(bufferedInputStream).use { tarInput ->

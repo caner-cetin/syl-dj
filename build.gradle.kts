@@ -59,7 +59,8 @@ dependencies {
     //
     implementation("org.apache.ftpserver:ftpserver-core:1.2.0")
     implementation("org.apache.ftpserver:ftplet-api:1.2.0")
-    implementation("org.netbeans.external:slf4j-api:RELEASE113")
     implementation("org.apache.mina:mina-core:2.2.3")
     implementation("org.slf4j:slf4j-simple:2.1.0-alpha1")
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
+    implementation("org.slf4j:slf4j-api:2.0.16")
 }

@@ -4,28 +4,21 @@ import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
-@OptIn(DelicateCoroutinesApi::class)
 fun main(args: Array<String>) {
-    val ftp = GetFTPServer()
-    GlobalScope.launch {
-        ftp.start()
-    }
     io.ktor.server.netty.EngineMain.main(args)
 }
 
-fun Application.module() {
+fun Application.module() = runBlocking {
     configureSerialization()
     configureSecurity()
-
+    val config = ApplicationConfig(null)
     val configModule = module {
         single { ApplicationConfig(null) }
     }
@@ -44,6 +37,13 @@ fun Application.module() {
     install(Koin) {
         slf4jLogger()
         modules(configModule, databaseModule, httpClientModule)
+    }
+
+    val isFTPEnabled = config.property("ftp.enabled").getString().toBoolean()
+    if (isFTPEnabled) {
+        CoroutineScope(Dispatchers.IO).launch {
+            getFTPServer(ApplicationConfig(null)).start()
+        }
     }
 
     configureRouting()

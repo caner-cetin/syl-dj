@@ -10,3 +10,12 @@ db:
     user: $POSTGRES_USER
     password: $POSTGRES_PASSWORD
     database: $POSTGRES_DB
+ftp:
+  enabled: $FTP_ENABLED
+  admin:
+    user: $FTP_ADMIN_USER
+    password: $FTP_ADMIN_PASSWORD
+    homeDirectory: $FTP_ADMIN_HOME_DIRECTORY
+  port:
+    passive:
+      range: $FTP_PASSIVE_PORT_RANGE
