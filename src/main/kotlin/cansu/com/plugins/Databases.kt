@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
-import java.sql.Connection
 
 fun DatabaseSupplier(config: ApplicationConfig): Database {
     val dbcfg = HikariConfig().apply {

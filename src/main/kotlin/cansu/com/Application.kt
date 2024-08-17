@@ -4,7 +4,10 @@ import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.dsl.module

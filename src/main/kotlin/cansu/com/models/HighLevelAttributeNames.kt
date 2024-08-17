@@ -31,7 +31,7 @@ enum class AttributeNameEnums {
             //END $$;
             // to replicate CREATE TYPE IF NOT EXISTS
             // https://stackoverflow.com/a/48382296/22757599
-            var baseline_query: String = "DO \$\$ BEGIN \n\t CREATE TYPE AttributeNames AS ENUM ("
+            var baseline_query = "DO \$\$ BEGIN \n\t CREATE TYPE AttributeNames AS ENUM ("
             AttributeNameEnums.entries.forEach { entry -> baseline_query = baseline_query + "'" + entry.name + "'," }
             baseline_query = "${baseline_query.dropLast(1)});"
             baseline_query = "$baseline_query\n EXCEPTION\n \tWHEN duplicate_object THEN null; \nEND \$\$;"

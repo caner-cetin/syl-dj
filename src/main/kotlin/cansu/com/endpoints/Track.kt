@@ -2,9 +2,8 @@ package cansu.com.endpoints
 
 import cansu.com.Errors
 import cansu.com.models.*
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import com.alibaba.fastjson2.JSON
+import com.alibaba.fastjson2.JSONObject
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -13,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import okhttp3.*
@@ -25,8 +25,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.sql.Connection
 import java.util.*
-import kotlin.NoSuchElementException
 import kotlin.coroutines.resume
+import kotlin.reflect.jvm.internal.ReflectProperties.Val
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Route.uploadRoute(db: Database) {
@@ -99,122 +99,138 @@ fun Route.uploadRoute(db: Database) {
         } else {
             callStream
         }
-        val coroScope = CoroutineScope(SupervisorJob())
         var processed = 0
-        val jsonElements: Sequence<Triple<TrackData, List<HighLevelAttributeData>, MirexClusterData>> =
-            sequence {
+        val dispatcher = Dispatchers.Default + CoroutineName("FileProcessing")
+
+        withContext(dispatcher) {
+            val dataBuffer =
+                Channel<Triple<TrackData, List<HighLevelAttributeData>, MirexClusterData?>>(Channel.UNLIMITED)
+            launch {
                 tarStream.buffered().use { bufferedInputStream ->
                     TarArchiveInputStream(bufferedInputStream).use { tarInput ->
                         while (true) {
                             val entry = tarInput.nextEntry ?: break
                             if (!entry.isDirectory && entry.name.endsWith(".json")) {
                                 processed++
-                                val gson = Gson().fromJson(tarInput.bufferedReader(), HighLevelInfoJSON::class.java)
-                                val trackUUID = UUID.randomUUID()
-                                // ignore the advice from your villain ide, metadata can be null
-                                // 2024-08-17T15:23:17.164024294Z java.lang.NullPointerException: Cannot invoke "cansu.com.models.HighLevelInfoJSON$Metadata.getTags()" because the return value of "cansu.com.models.HighLevelInfoJSON.getMetadata()" is null
-                                if (gson.metadata != null) {
-                                    val tags = gson.metadata.tags
-                                    val processedTrackData = TrackData(
-                                        id = trackUUID,
-                                        title = tags.title.first(),
-                                        artists = tags.artist,
-                                        // album can be null nvm the ide
-                                        album = if (tags.album.isNullOrEmpty()) {""} else {tags.album.first()} ,
-                                        musicBrainzAlbumID = try {
-                                            tags.musicbrainzAlbumid.first()
-                                        } catch (e: Exception) {
-                                            when (e) {
-                                                is NullPointerException, is NoSuchElementException -> null
-                                                else -> throw e
-                                            }
-                                        },
-                                        musicBrainzArtistIDs = tags.musicbrainzArtistid,
+                                val content = tarInput.bufferedReader().readText()
+                                launch {
+                                    val json: HighLevelInfoJSON = JSON.parseObject(
+                                        content,
+                                        HighLevelInfoJSON::class.javaObjectType
                                     )
-                                    val mirex = gson.highlevel.moods_mirex.all
-                                    val processedMoodData = MirexClusterData(
-                                        id = UUID.randomUUID(),
-                                        cluster = listOf(
-                                            mirex.cluster1.toFloat(),
-                                            mirex.cluster2.toFloat(),
-                                            mirex.cluster3.toFloat(),
-                                            mirex.cluster4.toFloat(),
-                                            mirex.cluster5.toFloat()
-                                        ),
-                                        trackID = trackUUID
-                                    )
-                                    val highlevelInfoJSONString = Gson().toJson(gson.highlevel)
-                                    val hash: JsonObject? = JsonParser.parseString(highlevelInfoJSONString).asJsonObject
-                                    val attrDataList = hash!!.asMap().map { (attrName, attrValue) ->
-                                        if (attrName != "moods_mirex") {
-                                            null
-                                        } else {
-                                            val attribute = attrValue.asJsonObject
-                                            val all = attribute["all"].asJsonObject.asMap().map { it.value.asFloat }
-                                            val value = attribute["value"].asJsonPrimitive.asString
-                                            val probability = attribute["probability"].asJsonPrimitive.asFloat
-                                            HighLevelAttributeData(
+                                    val trackUUID = UUID.randomUUID()
+                                    // ignore the advice from your villain ide, metadata can be null
+                                    // 2024-08-17T15:23:17.164024294Z java.lang.NullPointerException: Cannot invoke "cansu.com.models.HighLevelInfoJSON$Metadata.getTags()" because the return value of "cansu.com.models.HighLevelInfoJSON.getMetadata()" is null
+                                    if (json.metadata != null && json.metadata.tags.title != null) {
+                                        val tags = json.metadata.tags
+                                        val processedTrackData = TrackData(
+                                            id = trackUUID,
+                                            title = tags.title!!.first(),
+                                            artists = tags.artist,
+                                            album = if (tags.album.isNullOrEmpty()) {
+                                                ""
+                                            } else {
+                                                tags.album.first()
+                                            },
+                                            musicBrainzAlbumID = try {
+                                                val albumID = tags.musicbrainzAlbumid!!.first()
+                                                // 2024-08-17T19:43:31.113894470Z   Where: COPY tracks, line 217, column musicbrainz_album_id: "20b061b2-60ff-4a13-85ac-1f3374ce268c/20b061b2-60ff-4a13-85ac-1f3374ce268c/20b061b2-60ff-4a13-85ac-1f..."
+                                                if (albumID.length > 108) {
+                                                    albumID.split("/")[0]
+                                                } else {
+                                                    albumID
+                                                }
+                                            } catch (e: Exception) {
+                                                when (e) {
+                                                    is NullPointerException, is NoSuchElementException -> null
+                                                    else -> throw e
+                                                }
+                                            },
+                                            musicBrainzArtistIDs = tags.musicbrainzArtistid,
+                                        )
+                                        val processedMirexData = json.highlevel.moods_mirex?.let { mrx ->
+                                            MirexClusterData(
                                                 id = UUID.randomUUID(),
-                                                trackID = trackUUID,
-                                                attributeName = AttributeNameEnums.valueOf(attrName),
-                                                value = value,
-                                                probability = probability,
-                                                all_values = all
+                                                cluster = listOf(
+                                                    mrx.all.cluster1.toFloat(),
+                                                    mrx.all.cluster2.toFloat(),
+                                                    mrx.all.cluster3.toFloat(),
+                                                    mrx.all.cluster4.toFloat(),
+                                                    mrx.all.cluster5.toFloat()
+                                                ),
+                                                trackID = trackUUID
+                                            )
+                                        }
+                                        val highlevelInfoJSONString = JSON.toJSONString(json.highlevel)
+                                        val hash: HashMap<*, *>? = JSON.parseObject(highlevelInfoJSONString, HashMap::class.java)
+                                        val attrDataList = hash?.mapNotNull { (attrName, attrValue) ->
+                                            if (attrName == "moods_mirex") {
+                                                null
+                                            } else {
+                                                val attrJson = attrValue as JSONObject
+                                                val value = attrJson.getString("value")
+                                                val probability = attrJson.getFloat("probability")
+                                                val all = attrJson.getJSONObject("all") // Assuming "all" is also a JSONObject, handle accordingly
+
+                                                HighLevelAttributeData(
+                                                    id = UUID.randomUUID(),
+                                                    trackID = trackUUID,
+                                                    attributeName = AttributeNameEnums.valueOf(attrName.toString()),
+                                                    value = value,
+                                                    probability = probability,
+                                                    all_values = all.map { it.value }.filterIsInstance<Float>()
+                                                )
+                                            }
+                                        }
+
+                                        if (attrDataList != null) {
+                                            dataBuffer.send(
+                                                Triple(
+                                                    processedTrackData,
+                                                    attrDataList,
+                                                    processedMirexData
+                                                )
                                             )
                                         }
                                     }
-                                    yield(Triple(processedTrackData, attrDataList.filterNotNull(), processedMoodData))
-
+                                    processed++
                                 }
                             }
                         }
                     }
                 }
+                dataBuffer.close()
             }
-
-        val chunkSize = 1000
-        val databaseThresholdSize = 300
-        val trackDataList: MutableList<TrackData> = mutableListOf()
-        val highLevelAttributeDataList = mutableListOf<HighLevelAttributeData>()
-        val mirexClusterDataList = mutableListOf<MirexClusterData>()
-
-        for (chunk in jsonElements.chunked(chunkSize)) {
-            for ((track, attr, mirex) in chunk) {
-                trackDataList.add(track)
-                highLevelAttributeDataList.addAll(attr)
-                mirexClusterDataList.add(mirex)
-                if (trackDataList.size >= databaseThresholdSize) {
+            val databaseThresholdSize = 1000
+            val batchBuffer = mutableListOf<Triple<TrackData, List<HighLevelAttributeData>, MirexClusterData?>>()
+            for (item in dataBuffer) {
+                batchBuffer.add(item)
+                if (batchBuffer.size >= databaseThresholdSize) {
                     newSuspendedTransaction(Dispatchers.IO, db, Connection.TRANSACTION_SERIALIZABLE) {
                         val connection = this.connection.connection as Connection
-                        connection.batchInsertTracks(trackDataList)
-                        trackDataList.clear()
+                        connection.batchInsertTracks(batchBuffer.map { it.first })
+                        connection.batchInsertHighLevelAttributes(batchBuffer.flatMap { it.second })
+                        connection.batchInsertMirexClusters(batchBuffer.map { it.third }.filterNotNull())
                         commit()
-                        connection.batchInsertHighLevelAttributes(highLevelAttributeDataList)
-                        highLevelAttributeDataList.clear()
-                        commit()
-                        connection.batchInsertMirexClusters(mirexClusterDataList)
-                        mirexClusterDataList.clear()
-                        commit()
-                        connection.createStatement().execute("SELECT 1")
+                        batchBuffer.clear()
                     }
                 }
             }
-        }
-        // Insert any remaining data
-        if (trackDataList.isNotEmpty() || highLevelAttributeDataList.isNotEmpty() || mirexClusterDataList.isNotEmpty()) {
-            // todo: dry
-            newSuspendedTransaction(Dispatchers.IO, db, Connection.TRANSACTION_READ_COMMITTED) {
-                val connection = this.connection.connection as Connection
-                connection.batchInsertTracks(trackDataList)
-                trackDataList.clear()
-                connection.batchInsertHighLevelAttributes(highLevelAttributeDataList)
-                highLevelAttributeDataList.clear()
-                connection.batchInsertMirexClusters(mirexClusterDataList)
-                mirexClusterDataList.clear()
+            // Insert any remaining data
+            if (batchBuffer.isNotEmpty()) {
+                // todo: dry
+                newSuspendedTransaction(Dispatchers.IO, db, Connection.TRANSACTION_SERIALIZABLE) {
+                    val connection = this.connection.connection as Connection
+                    connection.batchInsertTracks(batchBuffer.map { it.first })
+                    connection.batchInsertHighLevelAttributes(batchBuffer.flatMap { it.second })
+                    connection.batchInsertMirexClusters(batchBuffer.map { it.third }.filterNotNull())
+                    commit()
+                    batchBuffer.clear()
+                }
             }
+            println(processed)
+            call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
         }
-        println(processed)
-        call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
     }
     post("/upload/releases") {
         val multipart = call.receiveMultipart()

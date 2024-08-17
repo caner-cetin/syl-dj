@@ -1,30 +1,31 @@
 package cansu.com.models
-import com.google.gson.annotations.SerializedName
+
+import com.alibaba.fastjson2.annotation.JSONField
 
 
 data class HighLevelInfoJSON(
     val highlevel: Highlevel,
-    val metadata: Metadata
+    val metadata: Metadata? = null
 ) {
     data class Highlevel(
-        val danceability: Danceability,
-        val gender: Gender,
-        val genre_dortmund: GenreDortmund,
-        val genre_electronic: GenreElectronic,
-        val genre_rosamerica: GenreRosamerica,
-        val genre_tzanetakis: GenreTzanetakis,
-        val ismir04_rhythm: Ismir04Rhythm,
-        val mood_acoustic: MoodAcoustic,
-        val mood_aggressive: MoodAggressive,
-        val mood_electronic: MoodElectronic,
-        val mood_happy: MoodHappy,
-        val mood_party: MoodParty,
-        val mood_relaxed: MoodRelaxed,
-        val mood_sad: MoodSad,
-        val moods_mirex: MoodsMirex,
-        val timbre: Timbre,
-        val tonal_atonal: TonalAtonal,
-        val voice_instrumental: VoiceInstrumental
+        val danceability: Danceability? = null,
+        val gender: Gender? = null,
+        val genre_dortmund: GenreDortmund? = null,
+        val genre_electronic: GenreElectronic? = null,
+        val genre_rosamerica: GenreRosamerica? = null,
+        val genre_tzanetakis: GenreTzanetakis? = null,
+        val ismir04_rhythm: Ismir04Rhythm? = null,
+        val mood_acoustic: MoodAcoustic? = null,
+        val mood_aggressive: MoodAggressive? = null,
+        val mood_electronic: MoodElectronic? = null,
+        val mood_happy: MoodHappy? = null,
+        val mood_party: MoodParty? = null,
+        val mood_relaxed: MoodRelaxed? = null,
+        val mood_sad: MoodSad? = null,
+        val moods_mirex: MoodsMirex? = null,
+        val timbre: Timbre? = null,
+        val tonal_atonal: TonalAtonal? = null,
+        val voice_instrumental: VoiceInstrumental? = null
     ) {
         data class Danceability(
             val all: All,
@@ -34,21 +35,21 @@ data class HighLevelInfoJSON(
         ) {
             data class All(
                 val danceable: Double,
-                @SerializedName("not_danceable")
+                @JSONField(name = "not_danceable")
                 val notDanceable: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -66,15 +67,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -99,15 +100,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -128,15 +129,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -160,15 +161,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -194,15 +195,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -214,39 +215,39 @@ data class HighLevelInfoJSON(
             val version: Version
         ) {
             data class All(
-                @SerializedName("ChaChaCha")
+                @JSONField(name = "ChaChaCha")
                 val chaChaCha: Double,
-                @SerializedName("Jive")
+                @JSONField(name = "Jive")
                 val jive: Double,
-                @SerializedName("Quickstep")
+                @JSONField(name = "Quickstep")
                 val quickstep: Double,
-                @SerializedName("Rumba-American")
+                @JSONField(name = "Rumba-American")
                 val rumbaAmerican: Double,
-                @SerializedName("Rumba-International")
+                @JSONField(name = "Rumba-International")
                 val rumbaInternational: Double,
-                @SerializedName("Rumba-Misc")
+                @JSONField(name = "Rumba-Misc")
                 val rumbaMisc: Double,
-                @SerializedName("Samba")
+                @JSONField(name = "Samba")
                 val samba: Double,
-                @SerializedName("Tango")
+                @JSONField(name = "Tango")
                 val tango: Double,
-                @SerializedName("VienneseWaltz")
+                @JSONField(name = "VienneseWaltz")
                 val vienneseWaltz: Double,
-                @SerializedName("Waltz")
+                @JSONField(name = "Waltz")
                 val waltz: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -259,21 +260,21 @@ data class HighLevelInfoJSON(
         ) {
             data class All(
                 val acoustic: Double,
-                @SerializedName("not_acoustic")
+                @JSONField(name = "not_acoustic")
                 val notAcoustic: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -286,21 +287,21 @@ data class HighLevelInfoJSON(
         ) {
             data class All(
                 val aggressive: Double,
-                @SerializedName("not_aggressive")
+                @JSONField(name = "not_aggressive")
                 val notAggressive: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -313,21 +314,21 @@ data class HighLevelInfoJSON(
         ) {
             data class All(
                 val electronic: Double,
-                @SerializedName("not_electronic")
+                @JSONField(name = "not_electronic")
                 val notElectronic: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -340,21 +341,21 @@ data class HighLevelInfoJSON(
         ) {
             data class All(
                 val happy: Double,
-                @SerializedName("not_happy")
+                @JSONField(name = "not_happy")
                 val notHappy: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -366,22 +367,22 @@ data class HighLevelInfoJSON(
             val version: Version
         ) {
             data class All(
-                @SerializedName("not_party")
+                @JSONField(name = "not_party")
                 val notParty: Double,
                 val party: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -393,22 +394,22 @@ data class HighLevelInfoJSON(
             val version: Version
         ) {
             data class All(
-                @SerializedName("not_relaxed")
+                @JSONField(name = "not_relaxed")
                 val notRelaxed: Double,
                 val relaxed: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -420,22 +421,22 @@ data class HighLevelInfoJSON(
             val version: Version
         ) {
             data class All(
-                @SerializedName("not_sad")
+                @JSONField(name = "not_sad")
                 val notSad: Double,
                 val sad: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -447,29 +448,29 @@ data class HighLevelInfoJSON(
             val version: Version
         ) {
             data class All(
-                @SerializedName("Cluster1")
+                @JSONField(name = "Cluster1")
                 val cluster1: Double,
-                @SerializedName("Cluster2")
+                @JSONField(name = "Cluster2")
                 val cluster2: Double,
-                @SerializedName("Cluster3")
+                @JSONField(name = "Cluster3")
                 val cluster3: Double,
-                @SerializedName("Cluster4")
+                @JSONField(name = "Cluster4")
                 val cluster4: Double,
-                @SerializedName("Cluster5")
+                @JSONField(name = "Cluster5")
                 val cluster5: Double
             )
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -487,15 +488,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -513,15 +514,15 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
@@ -539,67 +540,72 @@ data class HighLevelInfoJSON(
 
             data class Version(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
         }
     }
 
     data class Metadata(
-        @SerializedName("audio_properties")
+        @JSONField(name = "audio_properties")
         val audioProperties: AudioProperties,
         val tags: Tags,
         val version: Version
     ) {
         data class AudioProperties(
-            @SerializedName("analysis_sample_rate")
+            @JSONField(name = "analysis_sample_rate")
             val analysisSampleRate: Int,
-            @SerializedName("bit_rate")
+            @JSONField(name = "bit_rate")
             val bitRate: Int,
             val codec: String,
             val downmix: String,
-            @SerializedName("equal_loudness")
+            @JSONField(name = "equal_loudness")
             val equalLoudness: Int,
             val length: Double,
             val lossless: Int,
-            @SerializedName("md5_encoded")
+            @JSONField(name = "md5_encoded")
             val md5Encoded: String,
-            @SerializedName("replay_gain")
+            @JSONField(name = "replay_gain")
             val replayGain: Double
         )
 
         data class Tags(
-            val album: List<String>,
-            val albumartist: List<String>,
-            val artist: List<String>,
-            val date: List<String>,
-            val discnumber: List<String>,
-            @SerializedName("file_name")
+            @JSONField(name = "album")
+            val album: List<String>? = null,
+            @JSONField(name = "albumartist")
+            val albumartist: List<String>? = null,
+            @JSONField(name = "artist")
+            val artist: List<String>? = null,
+            @JSONField(name = "date")
+            val date: List<String>? = null,
+            @JSONField(name = "discnumber")
+            val discnumber: List<String>? = null,
+            @JSONField(name = "file_name")
             val fileName: String,
-            @SerializedName("musicbrainz album type")
-            val musicbrainzAlbumType: List<String>,
-            @SerializedName("musicbrainz_albumartistid")
-            val musicbrainzAlbumartistid: List<String>,
-            @SerializedName("musicbrainz_albumid")
-            val musicbrainzAlbumid: List<String>,
-            @SerializedName("musicbrainz_artistid")
-            val musicbrainzArtistid: List<String>,
-            @SerializedName("musicbrainz_recordingid")
-            val musicbrainzRecordingid: List<String>,
-            @SerializedName("musicbrainz release track id")
-            val musicbrainzReleaseTrackId: List<String>,
-            @SerializedName("musicbrainz_releasegroupid")
-            val musicbrainzReleasegroupid: List<String>,
-            val title: List<String>,
-            val tracknumber: List<String>
+            @JSONField(name = "musicbrainz album type")
+            val musicbrainzAlbumType: List<String>? = null,
+            @JSONField(name = "musicbrainz_albumartistid")
+            val musicbrainzAlbumartistid: List<String>? = null,
+            @JSONField(name = "musicbrainz_albumid")
+            val musicbrainzAlbumid: List<String>? = null,
+            @JSONField(name = "musicbrainz_artistid")
+            val musicbrainzArtistid: List<String>? = null,
+            @JSONField(name = "musicbrainz_recordingid")
+            val musicbrainzRecordingid: List<String>? = null,
+            @JSONField(name = "musicbrainz release track id")
+            val musicbrainzReleaseTrackId: List<String>? = null,
+            @JSONField(name = "musicbrainz_releasegroupid")
+            val musicbrainzReleasegroupid: List<String>? = null,
+            val title: List<String>? = null,
+            val tracknumber: List<String>? = null
         )
 
         data class Version(
@@ -608,23 +614,23 @@ data class HighLevelInfoJSON(
         ) {
             data class Highlevel(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String,
                 val gaia: String,
-                @SerializedName("gaia_git_sha")
+                @JSONField(name = "gaia_git_sha")
                 val gaiaGitSha: String,
-                @SerializedName("models_essentia_git_sha")
+                @JSONField(name = "models_essentia_git_sha")
                 val modelsEssentiaGitSha: String
             )
 
             data class Lowlevel(
                 val essentia: String,
-                @SerializedName("essentia_build_sha")
+                @JSONField(name = "essentia_build_sha")
                 val essentiaBuildSha: String,
-                @SerializedName("essentia_git_sha")
+                @JSONField(name = "essentia_git_sha")
                 val essentiaGitSha: String,
                 val extractor: String
             )
