@@ -3,7 +3,6 @@ package cansu.com
 import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +35,7 @@ fun Application.module() = runBlocking {
     transaction(DatabaseSupplier(ApplicationConfig(null))) {
         exec("CREATE EXTENSION  IF NOT EXISTS vector")
         exec(AttributeNameEnums.CreatePSQLTypeIfNotExists())
-        SchemaUtils.createMissingTablesAndColumns(HighLevelAttributes, Tracks, MirexClusters, Release)
+        SchemaUtils.createMissingTablesAndColumns(HighLevelAttributes, Tracks, MirexClusters, Release, Genre, Tags)
     }
     install(Koin) {
         slf4jLogger()

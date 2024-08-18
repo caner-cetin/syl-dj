@@ -4,6 +4,7 @@ import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
 
 object Release : Table("releases") {
@@ -21,11 +22,13 @@ class ReleaseData(
 ) {
     companion object {
         fun InsertChunk(chunk: List<ReleaseData>, db: Database) {
-            Release.batchInsert(chunk, shouldReturnGeneratedValues = false) {
-                this[Release.id] = it.id
-                this[Release.gid] = it.gid!!
-                this[Release.language] = it.language
-                this[Release.name] = it.name
+            transaction(db) {
+                Release.batchInsert(chunk, shouldReturnGeneratedValues = false) {
+                    this[Release.id] = it.id
+                    this[Release.gid] = it.gid!!
+                    this[Release.language] = it.language
+                    this[Release.name] = it.name
+                }
             }
         }
     }

@@ -2,6 +2,9 @@ package cansu.com.endpoints
 
 import cansu.com.Errors
 import cansu.com.models.*
+import cansu.com.plugins.createLineIteratorSequence
+import cansu.com.plugins.readNextJsonFile
+import cansu.com.plugins.tempFile
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import io.ktor.http.*
@@ -12,29 +15,24 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
 import okhttp3.*
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.io.FileUtils
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.sql.Connection
 import java.util.*
 import kotlin.coroutines.resume
-import kotlin.reflect.jvm.internal.ReflectProperties.Val
-import cansu.com.plugins.readNextJsonFile
-import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 
-@OptIn(ExperimentalCoroutinesApi::class)
 fun Route.uploadRoute(db: Database) {
     @Serializable
     data class TrackError(
@@ -242,24 +240,18 @@ fun Route.uploadRoute(db: Database) {
         println(processed)
         call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
     }
+    /*
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/release "http://0.0.0.0:8080/upload/releases"
+
+    where release is the release information from mbdump, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+     */
     post("/upload/releases") {
         val multipart = call.receiveMultipart()
         var linesProcessed = 0
         multipart.forEachPart { part ->
             if (part is PartData.FileItem) {
-                val tempFile = kotlin.io.path.createTempFile(prefix = "releases_upload", suffix = ".tmp")
-                part.streamProvider().use { input ->
-                    tempFile.toFile().outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                val lineSequence = sequence {
-                    FileUtils.lineIterator(tempFile.toFile(), "UTF-8").use { lineIterator ->
-                        while (lineIterator.hasNext()) {
-                            yield(lineIterator.nextLine())
-                        }
-                    }
-                }
+                val tempFile = part.tempFile("releases.upload")
+                val lineSequence = tempFile.createLineIteratorSequence()
                 val chunkSize = 1000
                 lineSequence.map { line ->
                     val spl = line.split("\t")
@@ -271,10 +263,62 @@ fun Route.uploadRoute(db: Database) {
                     )
                 }.chunked(chunkSize)
                     .forEach { chunk -> ReleaseData.InsertChunk(chunk, db); linesProcessed += chunk.size }
-                tempFile.toFile().delete()
+                tempFile.delete()
             }
         }
         call.respond(HttpStatusCode.Created, "Processed $linesProcessed records.")
+    }
+    /*
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/genre "http://0.0.0.0:8080/upload/releases"
+
+    where genre is the genre information from mbdump, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+     */
+    post("/upload/genres") {
+        val multipart = call.receiveMultipart()
+        multipart.forEachPart { part ->
+            if (part is PartData.FileItem) {
+                val tempFile = part.tempFile("genres.upload")
+                val lineSequence = tempFile.createLineIteratorSequence()
+                val chunkSize = 1000
+                lineSequence.map { line ->
+                    val spl = line.split("\t")
+                    GenreData(
+                        mbid = spl[1],
+                        name = spl[2],
+                    )
+                }.chunked(chunkSize)
+                    .forEach { chunk -> transaction(db) { chunk.insert() } }
+                tempFile.delete()
+            }
+        }
+        call.respond(HttpStatusCode.Created)
+    }
+    /*
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/release_tag "http://0.0.0.0:8080/upload/releases"
+    release_tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+
+    only genre data will be used in tags, but every tag is uploaded just in case.
+     */
+    post("/upload/tags") {
+        val multipart = call.receiveMultipart()
+        multipart.forEachPart { part ->
+            if (part is PartData.FileItem) {
+                val tempFile = part.tempFile("tags.upload")
+                val chunkSize = 1000
+                val lineSequence = tempFile.createLineIteratorSequence()
+                lineSequence.map { line ->
+                    val spl = line.split("\t")
+                    TagData(
+                        id = spl[0].toInt(),
+                        name = spl[1]
+                    )
+                }.chunked(chunkSize).forEach { chunk ->
+                    transaction(db) { chunk.insert() }
+                }
+                tempFile.delete()
+            }
+        }
+        call.respond(HttpStatusCode.Created)
     }
 }
 

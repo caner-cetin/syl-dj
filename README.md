@@ -14,6 +14,8 @@ Not really a *dj*, but a music recommendation engine built in kotlin.
   - [X] Optimized speed, can process and store 1 million tracks and MIREX clusters, 17.2 million track attributes in 10 gb tarball within 5+- minutes.
 - [ ] Upload [MusicBrainz](https://wiki.musicbrainz.org/Main_Page) data dumps to system.
   - [x] Release Info (id, gid, name, language ID)s
+  - [x] Genre Info
+  - [x] Tags
 - [x] Remote debug and VisualVM support
 - [x] Album cover query API
 
