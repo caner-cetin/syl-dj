@@ -1,10 +1,10 @@
 package cansu.com.models
 
+import com.alibaba.fastjson2.JSONObject
 import kotlinx.serialization.json.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.json.json
 import org.postgresql.copy.CopyManager
 import org.postgresql.core.BaseConnection
@@ -40,26 +40,21 @@ data class HighLevelAttributeData(
     var id: UUID,
     val trackID: UUID,
     val attributeName: AttributeNameEnums,
-    val value: String,
-    val probability: Float,
-    val all_values: List<Float>
-) {
-    companion object {
-        fun fromRow(resultRow: ResultRow) = HighLevelAttributeData(
-            id = resultRow[HighLevelAttributes.id].value,
-            trackID = resultRow[HighLevelAttributes.trackID].value,
-            attributeName = resultRow[HighLevelAttributes.attributeName],
-            value = resultRow[HighLevelAttributes.value],
-            probability = resultRow[HighLevelAttributes.probability],
-            all_values = resultRow[HighLevelAttributes.all_values].jsonArray.map { it.jsonPrimitive.float },
-        )
-    }
-}
+    val value: AttributeValue,
+    val probability: Probability,
+    val all_values: JSONObject
+)
+
+@JvmInline
+value class AttributeValue(val value: String)
+
+@JvmInline
+value class Probability(val value: Float)
 
 fun Connection.batchInsertHighLevelAttributes(attributes: List<HighLevelAttributeData>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
     val copyData = attributes.joinToString("\n") { attr ->
-        "${attr.id}\t${attr.trackID}\t${attr.attributeName}\t${attr.value}\t${attr.probability}\t[${attr.all_values.joinToString()}]"
+        "${attr.id}\t${attr.trackID}\t${attr.attributeName}\t${attr.value.value}\t${attr.probability.value}\t[${attr.all_values.map { it.value }.joinToString(",")}]"
     }
     val copySql = """
         COPY high_level_attributes (id, track_id, attribute_name, value, probability, all_values)

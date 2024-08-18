@@ -3,6 +3,7 @@ package cansu.com
 import cansu.com.models.*
 import cansu.com.plugins.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +21,7 @@ fun main(args: Array<String>) {
 
 fun Application.module() = runBlocking {
     configureSerialization()
-    configureSecurity()
+
     val config = ApplicationConfig(null)
     val configModule = module {
         single { ApplicationConfig(null) }
@@ -41,7 +42,6 @@ fun Application.module() = runBlocking {
         slf4jLogger()
         modules(configModule, databaseModule, httpClientModule)
     }
-
     val isFTPEnabled = config.property("ftp.enabled").getString().toBoolean()
     if (isFTPEnabled) {
         CoroutineScope(Dispatchers.IO).launch {

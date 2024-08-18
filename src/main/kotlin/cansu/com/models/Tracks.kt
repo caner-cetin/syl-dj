@@ -29,17 +29,24 @@ class TrackData(
 
 fun Connection.batchInsertTracks(tracks: List<TrackData>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
-    val trackData = tracks.map {
-        track ->
+    val trackData = tracks.map { track ->
         track.artists = if (track.artists == null) {
             emptyList()
         } else {
-            track.artists!!.map { artist -> artist.replace('"', '\'') }
+            // Replace double quotes with single quotes and escape any other problematic characters
+            track.artists!!.map { artist ->
+                artist.replace('"', '\'')
+                    .replace(",", "\\,") // Escape commas to prevent splitting issues
+            }
         }
         track
     }
-    val copyData = trackData.joinToString("\n")      { track ->
-        "${track.id}\t${track.title}\t${track.album}\t{${track.artists?.joinToString(",")}}\t${track.musicBrainzAlbumID}\t{${track.musicBrainzArtistIDs?.joinToString(",")}}"
+
+    val copyData = trackData.joinToString("\n") { track ->
+        val artists = track.artists?.joinToString(",")?.let { "{$it}" } ?: "{}"
+        val musicBrainzArtistIDs = track.musicBrainzArtistIDs?.joinToString(",")?.let { "{$it}" } ?: "{}"
+
+        "${track.id}\t${track.title}\t${track.album}\t$artists\t${track.musicBrainzAlbumID}\t$musicBrainzArtistIDs"
     }
 
     val copySQL = """

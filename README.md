@@ -15,9 +15,8 @@ acousticbrainz dumps lmfao
   - [ ] Password protection for upload methods in both HTTP route and FTP server
     - [X] FTP
     - [ ] HTTP
-  - [X] Optimized memory usage, can process 10 GB tar dump files with 2GB heap space, can do further optimizations and 
-    reduce the heap space to 1GB. Not the first and most priority right now.
-  - [ ] Kinda optimized speed,
+  - [X] Optimized memory usage, can process 10 GB tar dump files with 1GB of heap space.
+  - [X] Optimized speed, can process and store 1 million tracks and MIREX clusters, 17.2 million track attributes in 10 gb tarball within 5+- minutes.
 - [ ] Upload [MusicBrainz](https://wiki.musicbrainz.org/Main_Page) data dumps to system.
   - [x] Release Info (id, gid, name, language ID)s
 - [x] Remote debug and VisualVM support

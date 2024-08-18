@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     ports:
-      - "8080:8080"
+      - ${APPLICATION_PORT:-8080}:${APPLICATION_PORT:-8080}
       - "9010:9010"
       - "5005:5005"
       - "2221:2221"
@@ -60,6 +60,10 @@ services:
       FTP_ADMIN_PASSWORD: ${FTP_ADMIN_PASSWORD}
       FTP_ADMIN_HOME_DIRECTORY: ${FTP_ADMIN_HOME_DIRECTORY}
       FTP_PASSIVE_PORT_RANGE: ${FTP_PASSIVE_PORT_RANGE}
+      #
+      #
+      #
+      APPLICATION_PORT: ${APPLICATION_PORT:-8080}
     volumes:
       - ftp_upload_volume:${FTP_ADMIN_HOME_DIRECTORY:-/tmp/}
 
