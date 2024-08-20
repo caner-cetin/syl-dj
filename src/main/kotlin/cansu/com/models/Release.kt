@@ -5,7 +5,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.util.*
+import java.util.UUID
 
 object Release : Table("releases") {
     val id: Column<Int> = integer("id")
@@ -19,17 +19,13 @@ class ReleaseData(
     val gid: UUID?,
     val name: String,
     val language: String
-) {
-    companion object {
-        fun InsertChunk(chunk: List<ReleaseData>, db: Database) {
-            transaction(db) {
-                Release.batchInsert(chunk, shouldReturnGeneratedValues = false) {
-                    this[Release.id] = it.id
-                    this[Release.gid] = it.gid!!
-                    this[Release.language] = it.language
-                    this[Release.name] = it.name
-                }
-            }
-        }
+)
+
+fun <T : List<ReleaseData>> T.insert(shouldReturnGeneratedValues: Boolean? = false) {
+    Release.batchInsert(this, shouldReturnGeneratedValues = shouldReturnGeneratedValues ?: false) {
+        this[Release.id] = it.id
+        this[Release.gid] = it.gid!!
+        this[Release.language] = it.language
+        this[Release.name] = it.name
     }
 }

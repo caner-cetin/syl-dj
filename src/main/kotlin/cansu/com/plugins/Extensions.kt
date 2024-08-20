@@ -5,6 +5,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.FileUtils
 import java.io.BufferedReader
 import java.io.File
+import java.util.UUID
 import kotlin.io.path.outputStream
 
 fun TarArchiveInputStream.readNextJsonFile(reader: BufferedReader): String? {
@@ -35,3 +36,5 @@ fun PartData.FileItem.tempFile(fileName: String?): File {
     }
     return tempFile.toFile()
 }
+
+const val NULL_UUID: String = "00000000-0000-0000-0000-000000000000"

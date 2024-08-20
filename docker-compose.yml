@@ -10,10 +10,13 @@ services:
     image: pgvector/pgvector:pg16
     restart: always
     environment: *psql-variables
+    shm_size: 1G
     ports:
       - "5432:5432"
     networks:
       - postgres_backend_bridge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready" ]
       interval: 10s
@@ -28,8 +31,7 @@ services:
       - "9010:9010"
       - "5005:5005"
       - "2221:2221"
-      # not required if FTP_ENABLED is set to false
-      - ${FTP_PASSIVE_PORT_RANGE}:${FTP_PASSIVE_PORT_RANGE}
+      - ${FTP_PASSIVE_PORT_RANGE:-40000-41000}:${FTP_PASSIVE_PORT_RANGE:-40000-41000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,3 +75,4 @@ networks:
 
 volumes:
   ftp_upload_volume:
+  postgres_data:

@@ -5,6 +5,7 @@ import cansu.com.models.*
 import cansu.com.plugins.createLineIteratorSequence
 import cansu.com.plugins.readNextJsonFile
 import cansu.com.plugins.tempFile
+import cansu.com.plugins.NULL_UUID
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import io.ktor.http.*
@@ -150,6 +151,8 @@ fun Route.uploadRoute(db: Database) {
                                                     }
                                                 },
                                                 musicBrainzArtistIDs = tags.musicbrainzArtistid,
+                                                musicBrainzRecordingID = tags.musicbrainzRecordingid?.first() ?: NULL_UUID,
+                                                musicBrainzReleaseTrackID = tags.musicbrainzReleaseTrackId?.first() ?: NULL_UUID,
                                             )
                                             val processedMirexData = json.highlevel.moods_mirex?.let { mrx ->
                                                 MirexClusterData(
@@ -262,7 +265,7 @@ fun Route.uploadRoute(db: Database) {
                         language = spl[7]
                     )
                 }.chunked(chunkSize)
-                    .forEach { chunk -> ReleaseData.InsertChunk(chunk, db); linesProcessed += chunk.size }
+                    .forEach { chunk -> transaction(db) { chunk.insert() }; linesProcessed += chunk.size }
                 tempFile.delete()
             }
         }
@@ -294,8 +297,8 @@ fun Route.uploadRoute(db: Database) {
         call.respond(HttpStatusCode.Created)
     }
     /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/release_tag "http://0.0.0.0:8080/upload/releases"
-    release_tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/tag "http://0.0.0.0:8080/upload/releases"
+    tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
 
     only genre data will be used in tags, but every tag is uploaded just in case.
      */
@@ -320,6 +323,32 @@ fun Route.uploadRoute(db: Database) {
         }
         call.respond(HttpStatusCode.Created)
     }
+    /*
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump_derived/mbdump/release_tag "http://0.0.0.0:8080/upload/releases"
+    release_tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
+
+    only genre data will be used in tags, but every tag is uploaded just in case.
+     */
+    post("/upload/releases/tags") {
+        val multipart = call.receiveMultipart()
+        multipart.forEachPart { part ->
+            if (part is PartData.FileItem) {
+                val tmp = part.tempFile("releases.tags.upload")
+                val chunkSize = 1000
+                val lineSequence = tmp.createLineIteratorSequence()
+                lineSequence.map { line ->
+                    val spl = line.split("\t")
+                    ReleaseTagData(
+                        id = spl[0].toInt(),
+                        tagId = spl[1].toInt()
+                    )
+                }.chunked(chunkSize).forEach {
+                    chunk -> transaction(db) {chunk.insert()}
+                }
+            }
+        }
+    }
+
 }
 
 fun Route.albumRoute(httpClient: OkHttpClient) {
