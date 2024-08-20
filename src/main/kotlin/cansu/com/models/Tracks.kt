@@ -1,6 +1,7 @@
 package cansu.com.models
 
 
+import cansu.com.plugins.escapeSpecialCharacters
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.Column
 import org.postgresql.copy.CopyManager
@@ -34,7 +35,20 @@ class TrackData(
 fun Connection.batchInsertTracks(tracks: List<TrackData>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
     val copyData = tracks.joinToString("\n") { track ->
-        "${track.id}\t${track.title}\t${track.album}\t${track.artist}\t${track.musicBrainzAlbumID}\t${track.musicBrainzArtistIDs}\t${track.musicBrainzReleaseTrackID}\t${track.musicBrainzRecordingID}"
+        // 2024-08-20T16:03:17.804132169Z   Where: COPY tracks, line 130: "4b07178f-dc1b-45bc-b3e3-f02e06f7566d	Internet Connection	/\/\ /\ Y /\	M.I.A.	785481ee-bc5c-40a6-ae46..."
+        // WHO IN THEIR RIGHT FUCKING MIND NAMES AN ALBUM /\/\ /\ Y /\ FOR FUCKING SAKE ARE YOU FUCKING KIDDING ME
+        //
+        // i just wrote String.escapeSpecialCharacters() because of this
+        listOf(
+            track.id,
+            track.title.escapeSpecialCharacters(),
+            track.album.escapeSpecialCharacters(),
+            track.artist?.escapeSpecialCharacters(),
+            track.musicBrainzAlbumID,
+            track.musicBrainzArtistIDs,
+            track.musicBrainzReleaseTrackID,
+            track.musicBrainzRecordingID
+        ).joinToString("\t")
     }
 
     val copySQL = """

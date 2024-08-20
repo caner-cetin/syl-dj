@@ -43,3 +43,11 @@ fun Regex.validateAndExtractUUID(input: String): String {
     val match = this.find(input)
     return match?.value ?: NULL_UUID
 }
+
+fun String.escapeSpecialCharacters(): String {
+    return this.replace("\\", "\\\\")
+        .replace("/", "\\/")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+}

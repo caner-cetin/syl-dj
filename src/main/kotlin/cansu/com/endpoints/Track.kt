@@ -211,7 +211,7 @@ fun Route.uploadRoute(db: Database) {
                 }
             }
         }.buffer(64).flowOn(dispatcher)
-        val databaseThresholdSize = 500
+        val databaseThresholdSize = 3000
         val batchBuffer = mutableListOf<Triple<TrackData, List<HighLevelAttributeData>, MirexClusterData?>>()
         withContext(dispatcher) {
             jsonElements.collect {
@@ -271,7 +271,7 @@ fun Route.uploadRoute(db: Database) {
         call.respond(HttpStatusCode.Created, "Processed $linesProcessed records.")
     }
     /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/genre "http://0.0.0.0:8080/upload/releases"
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/genre "http://0.0.0.0:8080/upload/genres"
 
     where genre is the genre information from mbdump, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
      */
@@ -296,7 +296,7 @@ fun Route.uploadRoute(db: Database) {
         call.respond(HttpStatusCode.Created)
     }
     /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/tag "http://0.0.0.0:8080/upload/releases"
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump_derived/mbdump/tag "http://0.0.0.0:8080/upload/tags"
     tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
 
     only genre data will be used in tags, but every tag is uploaded just in case.
@@ -323,7 +323,7 @@ fun Route.uploadRoute(db: Database) {
         call.respond(HttpStatusCode.Created)
     }
     /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump_derived/mbdump/release_tag "http://0.0.0.0:8080/upload/releases"
+    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump-derived/mbdump/release_tag "http://0.0.0.0:8080/upload/releases/tags"
     release_tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
 
     only genre data will be used in tags, but every tag is uploaded just in case.
