@@ -5,7 +5,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.io.FileUtils
 import java.io.BufferedReader
 import java.io.File
-import java.util.UUID
 import kotlin.io.path.outputStream
 
 fun TarArchiveInputStream.readNextJsonFile(reader: BufferedReader): String? {
@@ -38,3 +37,9 @@ fun PartData.FileItem.tempFile(fileName: String?): File {
 }
 
 const val NULL_UUID: String = "00000000-0000-0000-0000-000000000000"
+val UUID_REGEX: Regex = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+
+fun Regex.validateAndExtractUUID(input: String): String {
+    val match = this.find(input)
+    return match?.value ?: NULL_UUID
+}

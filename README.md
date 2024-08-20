@@ -18,12 +18,9 @@ Not really a *dj*, but a music recommendation engine built in kotlin.
   - [x] Tags
 - [x] Remote debug and VisualVM support
 - [x] Album cover query API
-
-### Notes
-
-- there is no authentication (ftp has auth), there will be no frontend application, it is just solely backend because I am so
-burnt out on usual "CRUD" full stack apps, and sick of doing user management over and over again.
-
+- [ ] Frontend (will be much much much later)
+  - [ ] Quasar Setup
+  - [ ] ????
 
 ### Documentation
 wip

@@ -2,10 +2,7 @@ package cansu.com.endpoints
 
 import cansu.com.Errors
 import cansu.com.models.*
-import cansu.com.plugins.createLineIteratorSequence
-import cansu.com.plugins.readNextJsonFile
-import cansu.com.plugins.tempFile
-import cansu.com.plugins.NULL_UUID
+import cansu.com.plugins.*
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import io.ktor.http.*
@@ -130,29 +127,31 @@ fun Route.uploadRoute(db: Database) {
                                             val processedTrackData = TrackData(
                                                 id = trackUUID,
                                                 title = tags.title!!.first(),
-                                                artists = tags.artist,
+                                                artist = tags.artist?.first() ?: "",
                                                 album = if (tags.album.isNullOrEmpty()) {
                                                     ""
                                                 } else {
                                                     tags.album.first()
                                                 },
                                                 musicBrainzAlbumID = try {
-                                                    val albumID = tags.musicbrainzAlbumid!!.first()
-                                                    // 2024-08-17T19:43:31.113894470Z   Where: COPY tracks, line 217, column musicbrainz_album_id: "20b061b2-60ff-4a13-85ac-1f3374ce268c/20b061b2-60ff-4a13-85ac-1f3374ce268c/20b061b2-60ff-4a13-85ac-1f..."
-                                                    if (albumID.length > 108) {
-                                                        albumID.split("/")[0]
-                                                    } else {
-                                                        albumID
-                                                    }
+                                                    UUID_REGEX.validateAndExtractUUID(tags.musicbrainzAlbumid!!.first())
                                                 } catch (e: Exception) {
                                                     when (e) {
-                                                        is NullPointerException, is NoSuchElementException -> null
+                                                        is NullPointerException, is NoSuchElementException -> tags.musicbrainzAlbumid?.first()
+                                                            ?: NULL_UUID
+
                                                         else -> throw e
                                                     }
                                                 },
-                                                musicBrainzArtistIDs = tags.musicbrainzArtistid,
-                                                musicBrainzRecordingID = tags.musicbrainzRecordingid?.first() ?: NULL_UUID,
-                                                musicBrainzReleaseTrackID = tags.musicbrainzReleaseTrackId?.first() ?: NULL_UUID,
+                                                // org.postgresql.util.PSQLException: ERROR: invalid input syntax for type uuid: "056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028"
+                                                //  2024-08-20T15:18:13.663397959Z   Where: COPY tracks, line 483, column musicbrainz_artist_ids: "{056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028}"
+                                                musicBrainzArtistIDs = tags.musicbrainzArtistid?.let {
+                                                    UUID_REGEX.validateAndExtractUUID(it.first())
+                                                } ?: NULL_UUID,
+                                                musicBrainzRecordingID = tags.musicbrainzRecordingid?.first()
+                                                    ?: NULL_UUID,
+                                                musicBrainzReleaseTrackID = tags.musicbrainzReleaseTrackId?.first()
+                                                    ?: NULL_UUID,
                                             )
                                             val processedMirexData = json.highlevel.moods_mirex?.let { mrx ->
                                                 MirexClusterData(
@@ -342,8 +341,8 @@ fun Route.uploadRoute(db: Database) {
                         id = spl[0].toInt(),
                         tagId = spl[1].toInt()
                     )
-                }.chunked(chunkSize).forEach {
-                    chunk -> transaction(db) {chunk.insert()}
+                }.chunked(chunkSize).forEach { chunk ->
+                    transaction(db) { chunk.insert() }
                 }
             }
         }
