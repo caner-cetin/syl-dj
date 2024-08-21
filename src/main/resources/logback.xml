@@ -13,10 +13,10 @@
         <appender-ref ref="STDOUT"/>
     </logger>
     <logger name="com.zaxxer.hikari.pool.HikariPool" level="INFO"/>
-    <logger name="com.zaxxer.hikari.pool.ProxyConnection" level="INFO" />
-    <logger name="org.apache.mina.core.filterchain" level="INFO" />
-    <logger name="org.apache.mina.filter.executor.OrderedThreadPoolExecutor" level="WARN" />
-    <logger name="org.apache.ftpserver.command" level="INFO" />
-    <logger name="org.apache.ftpserver.impl.DefaultFtpHandler" level="INFO" />
-    <logger name="io.ktor.routing.Routing" level="INFO" />
+    <logger name="com.zaxxer.hikari.pool.ProxyConnection" level="INFO"/>
+    <logger name="org.apache.mina.core.filterchain" level="INFO"/>
+    <logger name="org.apache.mina.filter.executor.OrderedThreadPoolExecutor" level="WARN"/>
+    <logger name="org.apache.ftpserver.command" level="INFO"/>
+    <logger name="org.apache.ftpserver.impl.DefaultFtpHandler" level="INFO"/>
+    <logger name="io.ktor.routing.Routing" level="INFO"/>
 </configuration>

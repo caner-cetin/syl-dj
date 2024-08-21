@@ -29,5 +29,5 @@ fun Connection.batchInsertMirexClusters(clusters: List<MirexClusterData>) {
        COPY mirex_mood_clusters (id, cluster, track_id)
        FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\t')
     """.trimIndent()
-    copyManager.copyIn(copySQL,StringReader(copyData))
+    copyManager.copyIn(copySQL, StringReader(copyData))
 }

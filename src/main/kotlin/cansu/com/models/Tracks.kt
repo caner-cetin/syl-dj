@@ -23,7 +23,7 @@ object Tracks : UUIDTable("tracks") {
 
 class TrackData(
     val id: UUID,
-    var artist:String? = null,
+    var artist: String? = null,
     val album: String,
     val title: String,
     val musicBrainzAlbumID: String?,

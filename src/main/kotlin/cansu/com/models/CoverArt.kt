@@ -2,11 +2,13 @@ package cansu.com.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
 @Serializable
 data class CoverArt(
     val images: List<Image>,
     val release: String,
 )
+
 @Serializable
 data class Image(
     val approved: Boolean,
