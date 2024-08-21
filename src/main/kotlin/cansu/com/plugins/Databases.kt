@@ -8,7 +8,9 @@ import org.jetbrains.exposed.sql.Transaction
 
 fun DatabaseSupplier(config: ApplicationConfig): Database {
     val dbcfg = HikariConfig().apply {
-        jdbcUrl = "jdbc:postgresql://${config.property("db.postgres.url").getString()}/${config.property("db.postgres.database").getString()}"
+        jdbcUrl = "jdbc:postgresql://${
+            config.property("db.postgres.url").getString()
+        }/${config.property("db.postgres.database").getString()}"
         username = config.property("db.postgres.user").getString()
         password = config.property("db.postgres.password").getString()
         isAutoCommit = false

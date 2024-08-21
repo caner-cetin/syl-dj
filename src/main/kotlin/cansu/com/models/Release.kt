@@ -1,14 +1,12 @@
 package cansu.com.models
 
 import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.transactions.transaction
-import java.util.UUID
+import java.util.*
 
 object Release : Table("releases") {
-    val id: Column<Int> = integer("id")
+    val id: Column<Int> = integer("id").uniqueIndex()
     var gid: Column<UUID> = uuid("gid")
     var name: Column<String> = varchar("name", 1024)
     var language: Column<String> = varchar("language", 255)

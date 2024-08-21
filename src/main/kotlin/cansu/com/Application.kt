@@ -35,7 +35,17 @@ fun Application.module() = runBlocking {
     transaction(DatabaseSupplier(ApplicationConfig(null))) {
         exec("CREATE EXTENSION  IF NOT EXISTS vector")
         exec(AttributeNameEnums.CreatePSQLTypeIfNotExists())
-        SchemaUtils.createMissingTablesAndColumns(HighLevelAttributes, Tracks, MirexClusters, Release, Genre, Tags, ReleaseTags)
+        SchemaUtils.createMissingTablesAndColumns(
+            HighLevelAttributes,
+            Tracks,
+            MirexClusters,
+            Release,
+            Genre,
+            Tags,
+            ReleaseTags,
+            Recording,
+            RecordingTags
+        )
         CreateIndices()
     }
     install(Koin) {

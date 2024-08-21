@@ -95,13 +95,13 @@ fun Route.uploadRoute(db: Database) {
     post("/upload/highlevel") {
         val errorList: MutableList<TrackError> = Collections.synchronizedList(mutableListOf())
         val fileLocation = call.request.queryParameters["fileLocation"]
+        val deleteAfter = call.request.queryParameters["deleteAfter"].toBoolean()
         val callStream = call.receiveStream()
         val tarStream: InputStream = if (fileLocation != null) {
             File(fileLocation).inputStream()
         } else {
             callStream
         }
-        var processed = 0
         val dispatcher = Dispatchers.Default + CoroutineName("FileProcessing")
         val concurrentSemaphoreLimit = 16
         val semaphore = Semaphore(concurrentSemaphoreLimit)
@@ -115,7 +115,6 @@ fun Route.uploadRoute(db: Database) {
                             if (content != "") {
                                 semaphore.acquire()
                                 launch(dispatcher) {
-                                    processed++
                                     try {
                                         val json: HighLevelInfoJSON = JSON.parseObject(
                                             content,
@@ -239,14 +238,13 @@ fun Route.uploadRoute(db: Database) {
                 batchBuffer.clear()
             }
         }
-        println(processed)
+        if (deleteAfter) {
+            if (fileLocation != null) {
+                File(fileLocation).delete()
+            }
+        }
         call.respond(HttpStatusCode.OK, TrackInfoUploadHighLevelResponse(errorList))
     }
-    /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/release "http://0.0.0.0:8080/upload/releases"
-
-    where release is the release information from mbdump, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
-     */
     post("/upload/releases") {
         val multipart = call.receiveMultipart()
         var linesProcessed = 0
@@ -270,11 +268,6 @@ fun Route.uploadRoute(db: Database) {
         }
         call.respond(HttpStatusCode.Created, "Processed $linesProcessed records.")
     }
-    /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump/mbdump/genre "http://0.0.0.0:8080/upload/genres"
-
-    where genre is the genre information from mbdump, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
-     */
     post("/upload/genres") {
         val multipart = call.receiveMultipart()
         multipart.forEachPart { part ->
@@ -295,12 +288,6 @@ fun Route.uploadRoute(db: Database) {
         }
         call.respond(HttpStatusCode.Created)
     }
-    /*
-    curl -v --request POST -F upload=@/Users/canercetin/Downloads/mbdump_derived/mbdump/tag "http://0.0.0.0:8080/upload/tags"
-    tag is from **mbdump_derived**, refer to https://data.metabrainz.org/pub/musicbrainz/data/fullexport
-
-    only genre data will be used in tags, but every tag is uploaded just in case.
-     */
     post("/upload/tags") {
         val multipart = call.receiveMultipart()
         multipart.forEachPart { part ->
@@ -347,7 +334,32 @@ fun Route.uploadRoute(db: Database) {
             }
         }
     }
-
+    /*
+    Follows same structure with /upload/highlevel. Upload the file from FTP, and give the file location.
+     */
+    post("/upload/recording") {
+        val fileLocation = call.request.queryParameters["fileLocation"]
+        val deleteAfter = call.request.queryParameters["deleteAfter"].toBoolean()
+        val txt: File? = fileLocation?.let { loc -> File(loc) }
+        if (txt == null) {
+            call.respond(HttpStatusCode.BadRequest, "No file found at given location")
+            return@post
+        }
+        val lineSequence = txt.createLineIteratorSequence()
+        val chunkSize = 10000
+        lineSequence.map { line ->
+            val spl = line.split("\t")
+            RecordingData(
+                id = spl[0].toInt(),
+                mbid = spl[1]
+            )
+        }.chunked(chunkSize).forEach { chunk ->
+            transaction(db) { chunk.insert() }
+        }
+        if (deleteAfter) {
+            txt.delete()
+        }
+    }
 }
 
 fun Route.albumRoute(httpClient: OkHttpClient) {
