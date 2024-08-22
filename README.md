@@ -11,7 +11,6 @@ Not really a *dj*, but a music recommendation engine built in kotlin.
     - [x] Small-medium sized TAR archive support
       from [HTTP/POST body](https://everything.curl.dev/http/post/binary.html) directly
     - [x] Large sized TAR archive support with FTP (behind authentication)
-  i broke something and below does not work anymore aminakoyayim
     - [X] Optimized memory usage, can process 10 GB tar dump files with 1GB of heap space.
     - [X] Optimized speed, can process and store 1 million tracks and MIREX clusters, 17.2 million track attributes in
       10 gb tarball within 5+- minutes.

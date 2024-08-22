@@ -10,8 +10,6 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.postgresql.copy.CopyManager
 import org.postgresql.core.BaseConnection
 import java.io.StringReader
-import java.nio.MappedByteBuffer
-import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.util.*
 
@@ -68,16 +66,15 @@ fun TrackData.toTabDelimitedString(): String {
         append('\t')
         append(album.escapeSpecialCharacters())
         append('\t')
-        append(artist?.escapeSpecialCharacters())
+        append(artist?.escapeSpecialCharacters() ?: "")
         append('\t')
-        append(musicBrainzAlbumID)
+        append("$musicBrainzAlbumID")
         append('\t')
         append(musicBrainzArtistIDs)
         append('\t')
         append(musicBrainzReleaseTrackID)
         append('\t')
         append(musicBrainzRecordingID)
-        append('\t')
     }.toString()
 }
 

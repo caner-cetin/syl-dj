@@ -47,6 +47,7 @@ services:
         -XX:+UseG1GC
         -XX:ParallelGCThreads=8
         -XX:MaxGCPauseMillis=200
+        -XX:-OmitStackTraceInFastThrow
         -Dcom.sun.management.jmxremote=true
         -Dcom.sun.management.jmxremote.rmi.port=9010
         -Dcom.sun.management.jmxremote.port=9010

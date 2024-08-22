@@ -3,7 +3,8 @@ package cansu.com.endpoints
 import cansu.com.Errors
 import cansu.com.models.*
 import cansu.com.plugins.*
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.google.gson.Gson
+import com.google.gson.internal.LinkedTreeMap
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -12,11 +13,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.*
@@ -27,16 +24,8 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
-import java.sql.Connection
 import java.util.*
-import kotlin.collections.ArrayDeque
 import kotlin.coroutines.resume
-import kotlin.io.path.deleteIfExists
 
 @OptIn(ExperimentalCoroutinesApi::class)
 fun Route.uploadRoute(db: Database) {
@@ -110,22 +99,21 @@ fun Route.uploadRoute(db: Database) {
         } else {
             callStream
         }
-        val tarProcessor = Dispatchers.Default + CoroutineName("FileProcessor")
         val contentProcessor =
-            Dispatchers.Default.limitedParallelism(16) + SupervisorJob() + CoroutineName("JSONContentProcessor")
-        val objectMapper = ObjectMapper()
-        val jsonElements = flow {
+            Dispatchers.Default.limitedParallelism(32) + SupervisorJob() + CoroutineName("JSONContentProcessor")
+        val gson = Gson()
+        val jsonElements = channelFlow {
             tarStream.buffered().use { bufferedInputStream ->
                 TarArchiveInputStream(bufferedInputStream).use { tarInput ->
-                    val reader = tarInput.bufferedReader()
-                    val contents = generateSequence { tarInput.readNextJsonFile(reader) }
-                    contents.forEach { content ->
+                    while (true) {
+                        val reader = tarInput.bufferedReader()
+                        val content = tarInput.readNextJsonFile(reader) ?: return@channelFlow
                         if (content != "") {
-                            launch(contentProcessor) {
+                            async(contentProcessor) {
                                 val json: HighLevelInfoJSON =
-                                    objectMapper.readValue(content, HighLevelInfoJSON::class.java)
+                                    gson.fromJson(content, HighLevelInfoJSON::class.java)
                                 val trackUUID = UUID.randomUUID()
-                                if (json.metadata != null && json.metadata.tags.title != null) {
+                                if (json.metadata.tags.title != null) {
                                     val tags = json.metadata.tags
                                     val processedTrackData = TrackData(
                                         id = trackUUID,
@@ -169,31 +157,31 @@ fun Route.uploadRoute(db: Database) {
                                             trackID = trackUUID
                                         ).toTabDelimitedString()
                                     }
-                                    val highlevelInfoJSONString = objectMapper.writeValueAsString(json.highlevel)
+                                    val highlevelInfoJSONString = gson.toJson(json.highlevel)
                                     val hash: HashMap<*, *>? =
-                                        objectMapper.readValue(highlevelInfoJSONString, HashMap::class.java)
+                                        gson.fromJson(highlevelInfoJSONString, HashMap::class.java)
                                     val attrDataList = hash?.mapNotNull { (attrName, attrValue) ->
                                         if (attrName == "moods_mirex") {
                                             null
                                         } else {
-                                            val attrJson = attrValue as JSONObject
-                                            val value = attrJson.getString("value")
-                                            val probability = attrJson.getFloat("probability")
-                                            val all = attrJson.getJSONObject("all")
+                                            val attrJson = attrValue as LinkedTreeMap<*, *>
+                                            val value = attrJson["value"]
+                                            val probability = attrJson["probability"]
+                                            val all = attrJson["all"]
 
                                             HighLevelAttributeData(
                                                 id = UUID.randomUUID(),
                                                 trackID = trackUUID,
                                                 attributeName = AttributeNameEnums.valueOf(attrName.toString()),
-                                                value = AttributeValue(value),
-                                                probability = Probability(probability),
-                                                all_values = all
+                                                value = AttributeValue(value.toString()),
+                                                probability = Probability(probability.toString().toFloat()),
+                                                all_values = JSONObject(gson.toJson(all))
                                             ).toTabDelimitedString()
                                         }
                                     }
                                     // emit insert query strings
                                     if (attrDataList != null) {
-                                        emit(
+                                        send(
                                             ProcessedHighLevelData(
                                                 processedTrackData,
                                                 attrDataList,
@@ -202,7 +190,7 @@ fun Route.uploadRoute(db: Database) {
                                         )
                                     }
                                 }
-                            }
+                            }.await()
                         }
                     }
                 }
