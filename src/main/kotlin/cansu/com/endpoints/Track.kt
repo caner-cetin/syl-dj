@@ -13,7 +13,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.*
@@ -99,108 +100,113 @@ fun Route.uploadRoute(db: Database) {
         } else {
             callStream
         }
-        val contentProcessor =
-            Dispatchers.Default.limitedParallelism(32) + SupervisorJob() + CoroutineName("JSONContentProcessor")
+        val contentProcessor = Dispatchers.IO + SupervisorJob() + CoroutineName("JSONContentProcessor")
         val gson = Gson()
+        val sem = Semaphore(128 * 128)
         val jsonElements = channelFlow {
             tarStream.buffered().use { bufferedInputStream ->
                 TarArchiveInputStream(bufferedInputStream).use { tarInput ->
+                    val reader = tarInput.bufferedReader()
                     while (true) {
-                        val reader = tarInput.bufferedReader()
+                        sem.acquire()
                         val content = tarInput.readNextJsonFile(reader) ?: return@channelFlow
                         if (content != "") {
-                            async(contentProcessor) {
-                                val json: HighLevelInfoJSON =
-                                    gson.fromJson(content, HighLevelInfoJSON::class.java)
-                                val trackUUID = UUID.randomUUID()
-                                if (json.metadata.tags.title != null) {
-                                    val tags = json.metadata.tags
-                                    val processedTrackData = TrackData(
-                                        id = trackUUID,
-                                        title = tags.title!!.first(),
-                                        artist = tags.artist?.first() ?: "",
-                                        album = if (tags.album.isNullOrEmpty()) {
-                                            ""
-                                        } else {
-                                            tags.album.first()
-                                        },
-                                        musicBrainzAlbumID = try {
-                                            UUID_REGEX.validateAndExtractUUID(tags.musicbrainzAlbumid!!.first())
-                                        } catch (e: Exception) {
-                                            when (e) {
-                                                is NullPointerException, is NoSuchElementException -> tags.musicbrainzAlbumid?.first()
-                                                    ?: NULL_UUID
+                            launch(contentProcessor) {
+                                try {
+                                    val json: HighLevelInfoJSON =
+                                        gson.fromJson(content, HighLevelInfoJSON::class.java)
+                                    val trackUUID = UUID.randomUUID()
+                                    if (json.metadata?.tags?.title != null) {
+                                        val tags = json.metadata.tags
+                                        val processedTrackData = TrackData(
+                                            id = trackUUID,
+                                            title = tags.title!!.first(),
+                                            artist = tags.artist?.first() ?: "",
+                                            album = if (tags.album.isNullOrEmpty()) {
+                                                ""
+                                            } else {
+                                                tags.album.first()
+                                            },
+                                            musicBrainzAlbumID = try {
+                                                UUID_REGEX.validateAndExtractUUID(tags.musicbrainzAlbumid!!.first())
+                                            } catch (e: Exception) {
+                                                when (e) {
+                                                    is NullPointerException, is NoSuchElementException -> tags.musicbrainzAlbumid?.first()
+                                                        ?: NULL_UUID
 
-                                                else -> throw e
-                                            }
-                                        },
-                                        // org.postgresql.util.PSQLException: ERROR: invalid input syntax for type uuid: "056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028"
-                                        //  2024-08-20T15:18:13.663397959Z   Where: COPY tracks, line 483, column musicbrainz_artist_ids: "{056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028}"
-                                        musicBrainzArtistIDs = tags.musicbrainzArtistid?.let {
-                                            UUID_REGEX.validateAndExtractUUID(it.first())
-                                        } ?: NULL_UUID,
-                                        musicBrainzRecordingID = tags.musicbrainzRecordingid?.first()
-                                            ?: NULL_UUID,
-                                        musicBrainzReleaseTrackID = tags.musicbrainzReleasetrackid?.first()
-                                            ?: NULL_UUID,
-                                    ).toTabDelimitedString()
-                                    val processedMirexData = json.highlevel.moods_mirex?.let { mrx ->
-                                        MirexClusterData(
-                                            id = UUID.randomUUID(),
-                                            cluster = listOf(
-                                                mrx.all.cluster1.toFloat(),
-                                                mrx.all.cluster2.toFloat(),
-                                                mrx.all.cluster3.toFloat(),
-                                                mrx.all.cluster4.toFloat(),
-                                                mrx.all.cluster5.toFloat()
-                                            ),
-                                            trackID = trackUUID
+                                                    else -> throw e
+                                                }
+                                            },
+                                            // org.postgresql.util.PSQLException: ERROR: invalid input syntax for type uuid: "056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028"
+                                            //  2024-08-20T15:18:13.663397959Z   Where: COPY tracks, line 483, column musicbrainz_artist_ids: "{056e4f3e-d505-4dad-8ec1-d04f521cbb56/c5ce487b-0462-444e-a184-4de0fef7e028}"
+                                            musicBrainzArtistIDs = tags.musicbrainzArtistid?.let {
+                                                UUID_REGEX.validateAndExtractUUID(it.first())
+                                            } ?: NULL_UUID,
+                                            musicBrainzRecordingID = tags.musicbrainzRecordingid?.first()
+                                                ?: NULL_UUID,
+                                            musicBrainzReleaseTrackID = tags.musicbrainzReleasetrackid?.first()
+                                                ?: NULL_UUID,
                                         ).toTabDelimitedString()
-                                    }
-                                    val highlevelInfoJSONString = gson.toJson(json.highlevel)
-                                    val hash: HashMap<*, *>? =
-                                        gson.fromJson(highlevelInfoJSONString, HashMap::class.java)
-                                    val attrDataList = hash?.mapNotNull { (attrName, attrValue) ->
-                                        if (attrName == "moods_mirex") {
-                                            null
-                                        } else {
-                                            val attrJson = attrValue as LinkedTreeMap<*, *>
-                                            val value = attrJson["value"]
-                                            val probability = attrJson["probability"]
-                                            val all = attrJson["all"]
-
-                                            HighLevelAttributeData(
+                                        val processedMirexData = json.highlevel.moods_mirex?.let { mrx ->
+                                            MirexClusterData(
                                                 id = UUID.randomUUID(),
-                                                trackID = trackUUID,
-                                                attributeName = AttributeNameEnums.valueOf(attrName.toString()),
-                                                value = AttributeValue(value.toString()),
-                                                probability = Probability(probability.toString().toFloat()),
-                                                all_values = JSONObject(gson.toJson(all))
+                                                cluster = listOf(
+                                                    mrx.all.cluster1.toFloat(),
+                                                    mrx.all.cluster2.toFloat(),
+                                                    mrx.all.cluster3.toFloat(),
+                                                    mrx.all.cluster4.toFloat(),
+                                                    mrx.all.cluster5.toFloat()
+                                                ),
+                                                trackID = trackUUID
                                             ).toTabDelimitedString()
                                         }
-                                    }
-                                    // emit insert query strings
-                                    if (attrDataList != null) {
-                                        send(
-                                            ProcessedHighLevelData(
-                                                processedTrackData,
-                                                attrDataList,
-                                                processedMirexData
+                                        val highlevelInfoJSONString = gson.toJson(json.highlevel)
+                                        val hash: HashMap<*, *>? =
+                                            gson.fromJson(highlevelInfoJSONString, HashMap::class.java)
+                                        val attrDataList = hash?.mapNotNull { (attrName, attrValue) ->
+                                            if (attrName == "moods_mirex") {
+                                                null
+                                            } else {
+                                                val attrJson = attrValue as LinkedTreeMap<*, *>
+                                                val value = attrJson["value"]
+                                                val probability = attrJson["probability"]
+                                                val all = attrJson["all"]
+
+                                                HighLevelAttributeData(
+                                                    id = UUID.randomUUID(),
+                                                    trackID = trackUUID,
+                                                    attributeName = AttributeNameEnums.valueOf(attrName.toString()),
+                                                    value = AttributeValue(value.toString()),
+                                                    probability = Probability(probability.toString().toFloat()),
+                                                    all_values = JSONObject(gson.toJson(all))
+                                                ).toTabDelimitedString()
+                                            }
+                                        }
+                                        // emit insert query strings
+                                        if (attrDataList != null) {
+                                            send(
+                                                ProcessedHighLevelData(
+                                                    processedTrackData,
+                                                    attrDataList,
+                                                    processedMirexData
+                                                )
                                             )
-                                        )
+                                        }
                                     }
+                                } finally {
+                                    sem.release()
                                 }
-                            }.await()
+                            }
                         }
                     }
                 }
             }
-        }
+        }.buffer(DEFAULT_BUFFER_SIZE)
         val batchSize = 5000
         val batch = mutableListOf<ProcessedHighLevelData>()
         jsonElements
-            .collect {
-                batch.add(it)
+            .collect { data ->
+                batch.add(data)
                 if (batch.size >= batchSize) {
                     batch.flushToDB(db)
                     batch.clear()

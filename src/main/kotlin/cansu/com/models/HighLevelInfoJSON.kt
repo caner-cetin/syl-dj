@@ -3,7 +3,7 @@ import com.google.gson.annotations.SerializedName
 
 data class HighLevelInfoJSON(
     val highlevel: Highlevel,
-    val metadata: Metadata
+    val metadata: Metadata?
 ) {
     data class Highlevel(
         val danceability: Danceability,
@@ -570,7 +570,7 @@ data class HighLevelInfoJSON(
     data class Metadata(
         @SerializedName("audio_properties")
         val audioProperties: AudioProperties,
-        val tags: Tags,
+        val tags: Tags?,
         val version: Version
     ) {
         data class AudioProperties(
