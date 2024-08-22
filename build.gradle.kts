@@ -8,6 +8,22 @@ plugins {
     kotlin("jvm") version "2.0.10"
     id("io.ktor.plugin") version "2.3.12"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.10"
+    id("com.google.cloud.tools.jib") version "3.4.3"
+}
+
+jib {
+    from {
+        image = "amazoncorretto:21"
+        platforms {
+            platform {
+                architecture = "arm64"
+                os = "linux"
+            }
+        }
+    }
+    to {
+        image = "syl-dj-backend"
+    }
 }
 
 group = "cansu.com"
@@ -59,5 +75,12 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.1.0-alpha1")
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation("org.slf4j:slf4j-api:2.0.16")
-    implementation("com.alibaba:fastjson:2.0.52")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation("com.google.guava:guava:33.3.0-jre")
+    // https://mvnrepository.com/artifact/com.fasterxml.uuid/java-uuid-generator
+    implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
+
+
 }

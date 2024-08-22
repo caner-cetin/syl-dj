@@ -23,9 +23,7 @@ services:
       timeout: 5s
       retries: 5
   backend:
-    build:
-      context: .
-      dockerfile: backend.Dockerfile
+    image: "syl-dj-backend"
     ports:
       - ${APPLICATION_PORT:-8080}:${APPLICATION_PORT:-8080}
       - "9010:9010"
@@ -46,6 +44,9 @@ services:
       _JAVA_OPTIONS: >
         -Xmx2048m
         -Xms2048m
+        -XX:+UseG1GC
+        -XX:ParallelGCThreads=8
+        -XX:MaxGCPauseMillis=200
         -Dcom.sun.management.jmxremote=true
         -Dcom.sun.management.jmxremote.rmi.port=9010
         -Dcom.sun.management.jmxremote.port=9010
