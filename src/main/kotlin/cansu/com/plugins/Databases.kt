@@ -32,11 +32,7 @@ class DatabaseFactory(private val config: ApplicationConfig) {
 fun Transaction.CreateIndices() {
     exec(
         """
-                create index if not exists idx_tracks_album ON tracks (musicbrainz_album_id);
-                create index if not exists idx_releases_gid ON releases (gid);
-                create index if not exists idx_rtj_id ON release_tags_junction (id, tag_id);
-                create index if not exists idx_tags_id ON tags (id, name);
-                create index if not exists idx_tg_name ON track_genres (name);
+            SELECT 1;
             """.trimIndent()
     )
 }

@@ -20,14 +20,20 @@ class MirexClusterData(
     val trackID: UUID
 )
 
-fun Connection.batchInsertMirexClusters(clusters: List<MirexClusterData>) {
+fun Connection.batchInsertMirexClusters(clusters: List<String>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
-    val copyData = clusters.joinToString("\n") { clst ->
-        "${clst.id}\t[${clst.cluster.joinToString(",")}]\t${clst.trackID}"
-    }
+    val copyData = clusters.joinToString("\n")
     val copySQL = """
        COPY mirex_mood_clusters (id, cluster, track_id)
        FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\t')
     """.trimIndent()
     copyManager.copyIn(copySQL, StringReader(copyData))
+}
+
+fun <T: MirexClusterData> T.toTabDelimitedString(): String {
+    return listOf(
+        this.id,
+        this.cluster,
+        this.trackID
+    ).joinToString("\t")
 }

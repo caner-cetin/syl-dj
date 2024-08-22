@@ -1,19 +1,18 @@
 package cansu.com.models
 
-import com.alibaba.fastjson2.JSONObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.json.json
+import org.json.JSONObject
 import org.postgresql.copy.CopyManager
 import org.postgresql.core.BaseConnection
 import org.postgresql.util.PGobject
 import java.io.StringReader
 import java.sql.Connection
 import java.util.*
-
 
 class PGEnum<T : Enum<T>>(enumTypeName: String, enumValue: T?) : PGobject() {
     init {
@@ -51,16 +50,28 @@ value class AttributeValue(val value: String)
 @JvmInline
 value class Probability(val value: Float)
 
-fun Connection.batchInsertHighLevelAttributes(attributes: List<HighLevelAttributeData>) {
+fun Connection.batchInsertHighLevelAttributes(attributes: List<String>) {
     val copyManager = CopyManager(unwrap(BaseConnection::class.java))
-    val copyData = attributes.joinToString("\n") { attr ->
-        "${attr.id}\t${attr.trackID}\t${attr.attributeName}\t${attr.value.value}\t${attr.probability.value}\t[${
-            attr.all_values.map { it.value }.joinToString(",")
-        }]"
-    }
+    val copyData = attributes.joinToString("\n")
     val copySql = """
         COPY high_level_attributes (id, track_id, attribute_name, value, probability, all_values)
         FROM STDIN WITH (FORMAT TEXT, DELIMITER E'\t')
     """.trimIndent()
     copyManager.copyIn(copySql, StringReader(copyData))
+}
+
+fun HighLevelAttributeData.toTabDelimitedString(): String {
+    return StringBuilder().apply {
+        append(id)
+        append('\t')
+        append(trackID)
+        append('\t')
+        append(attributeName)
+        append('\t')
+        append(value.value)
+        append('\t')
+        append(probability.value)
+        append('\t')
+        append(all_values)
+    }.toString()
 }

@@ -51,3 +51,4 @@ fun String.escapeSpecialCharacters(): String {
         .replace("\r", "\\r")
         .replace("\t", "\\t")
 }
+
